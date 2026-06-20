@@ -6,6 +6,9 @@ const MODEL_NAMES: Record<string, string> = {
   summarize: "Summarize",
   "remove-bg": "Background Removal",
   classify: "Image Classifier",
+  detect: "Object Detection",
+  segment: "Image Segmentation",
+  ocr: "Text Recognition",
   train: "Model Training",
 };
 
