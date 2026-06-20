@@ -1,26 +1,195 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── White-only theme ──────────────────────────────────────────────── */
+
+:root {
+  --bg: #fbfbfd;
+  --bg-secondary: #f5f5f7;
+  --fg: #1d1d1f;
+  --fg-secondary: #86868b;
+  --glass: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-ring: rgba(255, 255, 255, 0.25);
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --hero-gradient: linear-gradient(180deg, rgba(251,251,253,0) 0%, rgba(251,251,253,1) 100%);
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
 }
+
+/* ─── Hero background ───────────────────────────────────────────────── */
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.hero-bg::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image: url("https://images.unsplash.com/photo-1679900898687-3200929283f5?w=1920&q=80&fm=webp&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(0.8) brightness(1.05);
+  will-change: transform;
+}
+
+.hero-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--hero-gradient);
+  pointer-events: none;
+}
+
+/* ─── Hero video overlay ────────────────────────────────────────────── */
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+.hero-video.ready {
+  opacity: 1;
+}
+
+/* ─── Animated flowing gradient (fallback when no video) ────────────── */
+
+.hero-flow {
+  position: absolute;
+  inset: -50%;
+  z-index: 0;
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(230, 245, 255, 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(240, 250, 255, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(245, 240, 255, 0.3) 0%, transparent 50%);
+  animation: flow-shift 12s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes flow-shift {
+  0% { transform: translate(0%, 0%) scale(1); }
+  25% { transform: translate(-5%, 3%) scale(1.02); }
+  50% { transform: translate(3%, -4%) scale(1.04); }
+  75% { transform: translate(-2%, 5%) scale(1.01); }
+  100% { transform: translate(4%, -2%) scale(1.03); }
+}
+
+/* ─── Section background ────────────────────────────────────────────── */
+
+.section-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.35;
+  z-index: 0;
+}
+
+.section-bg::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background-image: url("https://images.unsplash.com/photo-1665249673961-0b84f33b1e36?w=1920&q=80&fm=webp&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(0.6) brightness(1.15);
+}
+
+/* ─── Decorative bottom image ───────────────────────────────────────── */
+
+.footer-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.footer-art::before {
+  content: "";
+  position: absolute;
+  inset: -10%;
+  background-image: url("https://images.unsplash.com/photo-1674937746815-f5b24467389a?w=1920&q=80&fm=webp&fit=crop");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: saturate(0.5) brightness(1.2);
+}
+
+/* ─── Glass utility ─────────────────────────────────────────────────── */
+
+.glass {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.glass-ring {
+  box-shadow: inset 0 0 0 1px var(--glass-ring);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+}
+
+/* ─── Subtle scrollbar ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.08); border-radius: 2px; }
+
+/* ─── Animations ────────────────────────────────────────────────────── */
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin-slow 2s linear infinite; }
+
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+.animate-caret { animation: blink 0.8s step-end infinite; }
+
+@keyframes ping-soft {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(2); opacity: 0; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.animate-ping-soft { animation: ping-soft 2s ease-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float { animation: float 4s ease-in-out infinite; }
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up { animation: fade-in-up 0.6s ease-out; }
