@@ -1,4 +1,4 @@
-/** Extracted text from a PDF */
+/** Base extraction result */
 export interface ExtractionResult {
   text: string;
   pages: string[];
@@ -38,4 +38,56 @@ export interface ChunkProgress {
   total: number;
   timeMs: number;
   text: string;
+}
+
+/** Generic model inference stage */
+export type InferenceStage =
+  | "idle"
+  | "loading-model"
+  | "compiling"
+  | "processing"
+  | "done"
+  | "error";
+
+/** A trained model adapter stored in IndexedDB */
+export interface TrainedAdapter {
+  id: string;
+  name: string;
+  /** The base model this adapter works with */
+  baseModel: string;
+  /** Size of the adapter in bytes */
+  sizeBytes: number;
+  /** The adapter weight data (serialized float32 array) */
+  weights: Record<string, Float32Array>;
+  /** Training metadata */
+  metadata: {
+    sourceFile: string;
+    trainingTimeMs: number;
+    epochs: number;
+    lossHistory: number[];
+    charCount: number;
+  };
+  createdAt: string;
+}
+
+/** A personality model (character-level LSTM) */
+export interface PersonalityModel {
+  id: string;
+  name: string;
+  styleStats: StyleAnalysis;
+  embedding: Float32Array | null;
+  weights: Record<string, number[]> | null;
+  examples: string[];
+  createdAt: string;
+}
+
+export interface StyleAnalysis {
+  vocabularySize: number;
+  avgSentenceLength: number;
+  uppercaseRatio: number;
+  punctuationRatio: number;
+  emojiCount: number;
+  topWords: [string, number][];
+  topBigrams: [string, number][];
+  description: string;
 }

@@ -73,7 +73,7 @@ export default function SummaryPage() {
 
   return (
     <div className="min-h-dvh flex flex-col bg-[var(--bg)]">
-      <Navbar showBack />
+      <Navbar />
 
       {/* Action bar */}
       <div className="border-b border-black/[0.04]">

@@ -4,9 +4,9 @@ export function Footer() {
       <div className="footer-art" />
       <div className="relative z-10 px-5 py-8">
         <div className="flex items-center justify-between text-[11px] text-gray-400">
-          <span>&copy; {new Date().getFullYear()} pdf to summary.</span>
+          <span>&copy; {new Date().getFullYear()} browser ai.</span>
           <p>
-            Operates entirely in-browser via ONNX Runtime Web.
+            All models run entirely in-browser. No servers, no API keys, no tracking.
           </p>
         </div>
       </div>

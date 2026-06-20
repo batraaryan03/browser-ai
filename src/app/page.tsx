@@ -1,192 +1,84 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
-
-import { useSummarizer } from "@/hooks/useSummarizer";
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
-import { HeroSection } from "@/components/HeroSection";
-import { UploadZone } from "@/components/UploadZone";
-import { LiveMonitor } from "@/components/LiveMonitor";
-import { SummaryResult } from "@/components/SummaryResult";
-import { SummaryHistory } from "@/components/SummaryHistory";
-import { HowItWorks } from "@/components/HowItWorks";
+import { ModelSelector } from "@/components/ModelSelector";
 import { Footer } from "@/components/Footer";
 
 export default function Home() {
-  const { stage, error, modelProgress, chunkProgress, result, processFile: startProcess, processText: startProcessText, reset } = useSummarizer();
-  const [showInfo, setShowInfo] = useState(false);
-
-  // Download confirmation dialog state
-  const [showDialog, setShowDialog] = useState(false);
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [pendingText, setPendingText] = useState<string | null>(null);
-
-  // Check if model is already cached in IndexedDB
-  const isModelCached = useCallback(async (): Promise<boolean> => {
-    try {
-      if (typeof indexedDB !== "undefined" && indexedDB.databases) {
-        const dbs = await indexedDB.databases();
-        return dbs.some(
-          (db) => db.name && (db.name.toLowerCase().includes("xenova") || db.name.toLowerCase().includes("t5")),
-        );
-      }
-    } catch {
-      // ignore
-    }
-    return false;
-  }, []);
-
-  // Handle file received — check cache, show dialog if needed
-  const handleFileReceived = useCallback(
-    async (f: File) => {
-      if (!f.name.toLowerCase().endsWith(".pdf")) {
-        toast.error("Please upload a PDF file.");
-        return;
-      }
-
-      if (stage === "done" || !modelProgress) {
-        const cached = await isModelCached();
-        if (cached) {
-          startProcess(f);
-          return;
-        }
-      }
-
-      setPendingFile(f);
-      setShowDialog(true);
-    },
-    [stage, modelProgress, startProcess, isModelCached],
-  );
-
-  const handleDialogConfirm = useCallback(() => {
-    setShowDialog(false);
-    if (pendingFile) {
-      startProcess(pendingFile);
-      setPendingFile(null);
-    } else if (pendingText) {
-      startProcessText(pendingText, "pasted-text.txt");
-      setPendingText(null);
-    }
-  }, [pendingFile, pendingText, startProcess, startProcessText]);
-
-  const handleDialogCancel = useCallback(() => {
-    setShowDialog(false);
-    setPendingFile(null);
-    setPendingText(null);
-  }, []);
-
-  const handleTextPaste = useCallback(
-    async (text: string) => {
-      const cached = await isModelCached();
-      if (!cached && !modelProgress) {
-        setPendingText(text);
-        setShowDialog(true);
-        return;
-      }
-
-      startProcessText(text, "pasted-text.txt");
-    },
-    [modelProgress, isModelCached, startProcessText],
-  );
-
-  const isProcessing = stage === "extracting" || stage === "loading" || stage === "summarizing" || stage === "saving";
+  const router = useRouter();
 
   return (
     <div className="relative min-h-dvh flex flex-col">
-      <Navbar onInfoClick={() => setShowInfo(!showInfo)} />
+      <Navbar />
 
-      {/* Info banner */}
-      <AnimatePresence>
-        {showInfo && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="mx-auto max-w-lg px-5 pt-3 pb-2">
-              <div className="bg-white p-4">
-                <div className="space-y-1.5 text-xs text-gray-500 leading-relaxed">
-                  <p>
-                    <strong className="text-gray-700">100% local.</strong> Your PDF never leaves your device.
-                    Uses T5-small (~308 MB) via ONNX Runtime Web.
-                  </p>
-                  <p>Built with Transformers.js, pdf.js, and Next.js. No servers, no API keys, no tracking.</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <main className="flex-1 flex flex-col items-center px-5 pt-8 pb-20">
-        {/* Hero */}
-        {stage === "idle" && !result && !error && <HeroSection />}
-
-        {/* Upload zone */}
-        {(stage === "idle" || stage === "error") && !result && (
-          <div className={stage === "idle" ? "mt-8 relative z-10" : "mt-4 relative z-10"}>
-            <UploadZone
-              onFile={handleFileReceived}
-              onText={handleTextPaste}
-              disabled={isProcessing}
-              showDialog={showDialog}
-              pendingFileName={pendingFile?.name ?? null}
-              onDialogConfirm={handleDialogConfirm}
-              onDialogCancel={handleDialogCancel}
-            />
+      <main className="flex-1 flex flex-col items-center justify-center px-5 pb-16">
+        {/* Hero area — centered, minimal */}
+        <div className="relative w-full max-w-lg mx-auto text-center space-y-8 pt-24 pb-12">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-1.5 bg-black/[0.03] px-3 py-1.5">
+            <span className="inline-block h-1.5 w-1.5 bg-black" />
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-gray-500">
+              browser ai platform
+            </span>
           </div>
-        )}
 
-        {/* Error */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="w-full max-w-lg mx-auto mt-4 relative z-10"
+          {/* Headline */}
+          <h1 className="text-4xl font-medium tracking-tight leading-[1.08] sm:text-5xl">
+            AI that runs on
+            <br />
+            <span className="text-gray-500">your machine.</span>
+          </h1>
+
+          <p className="text-sm leading-relaxed text-gray-400 max-w-sm mx-auto">
+            Pick a model below. It downloads once, caches locally, and runs entirely in your browser.
+            No servers, no API keys, no limits.
+          </p>
+
+          {/* Model selector */}
+          <div className="pt-4">
+            <ModelSelector />
+          </div>
+
+          {/* Quick links */}
+          <div className="flex items-center justify-center gap-4 pt-2">
+            <button
+              onClick={() => router.push("/models/summarize")}
+              className="text-xs text-gray-400 hover:text-black underline underline-offset-4 transition-colors"
             >
-              <div className="bg-white px-4 py-3">
-                <div className="flex items-start gap-2.5">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="mt-0.5 shrink-0 text-black">
-                    <circle cx="7" cy="7" r="5.5" /><path d="M7 4.5v3M7 10v.5" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-black">Error</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{error}</p>
-                  </div>
-                  <button onClick={reset} className="text-xs text-black underline underline-offset-4 hover:opacity-60 shrink-0">
-                    Try again
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Live Monitor */}
-        <div className="mt-6 relative z-10">
-          <LiveMonitor modelProgress={modelProgress} chunkProgress={chunkProgress} stage={stage} />
+              Skip to summarization
+            </button>
+            <span className="w-px h-3 bg-gray-300/30" />
+            <button
+              onClick={() => router.push("/models/train")}
+              className="text-xs text-gray-400 hover:text-black underline underline-offset-4 transition-colors"
+            >
+              Train a model
+            </button>
+          </div>
         </div>
 
-        {/* Summary result */}
-        {result && (
-          <div className="relative z-10 w-full flex flex-col items-center">
-            <SummaryResult result={result} chunkProgress={chunkProgress} onReset={reset} />
-            <SummaryHistory />
+        {/* Features grid */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="w-full max-w-2xl mx-auto mt-8"
+        >
+          <div className="grid grid-cols-3 divide-x divide-black/[0.04] border-t border-black/[0.04]">
+            {[
+              { label: "100% local", desc: "Your data stays on your device" },
+              { label: "Zero cost", desc: "No API fees, no subscriptions" },
+              { label: "Offline-ready", desc: "Works after first download" },
+            ].map((f) => (
+              <div key={f.label} className="px-4 py-5 text-center">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-black mb-1">{f.label}</p>
+                <p className="text-xs text-gray-400">{f.desc}</p>
+              </div>
+            ))}
           </div>
-        )}
-
-        {/* How it works + History */}
-        {stage === "idle" && !result && !error && (
-          <div className="relative z-10 w-full flex flex-col items-center">
-            <SummaryHistory />
-            <HowItWorks />
-          </div>
-        )}
+        </motion.div>
 
         <Footer />
       </main>
