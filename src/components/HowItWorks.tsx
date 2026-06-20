@@ -32,11 +32,11 @@ const item = {
 
 export function HowItWorks() {
   return (
-    <section className="relative w-full max-w-4xl mx-auto mt-28 overflow-hidden rounded-3xl">
+    <section className="relative w-full max-w-4xl mx-auto mt-28 overflow-hidden">
       {/* Decorative background */}
       <div className="section-bg" />
 
-      <div className="relative z-10 px-6 py-16">
+      <div className="relative z-10 py-16">
         <div className="text-center space-y-3 mb-14">
           <p className="text-xs font-medium uppercase tracking-[0.15em] text-gray-400">
             how it works
@@ -58,7 +58,7 @@ export function HowItWorks() {
         >
           {STEPS.map((s) => (
             <motion.div key={s.num} variants={item} className="text-center">
-              <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl glass glass-ring mb-4">
+              <div className="inline-flex items-center justify-center h-12 w-12 bg-black/[0.03] mb-4">
                 <span className="text-sm font-semibold text-gray-500">{s.num}</span>
               </div>
               <h3 className="text-base font-medium mb-2 text-[#1d1d1f]">{s.title}</h3>

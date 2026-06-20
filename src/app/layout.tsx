@@ -24,14 +24,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
           <Toaster
             position="top-center"
-            richColors
             closeButton
             toastOptions={{
               style: {
-                background: "rgba(255,255,255,0.85)",
-                backdropFilter: "blur(24px)",
-                border: "1px solid rgba(0,0,0,0.06)",
-                borderRadius: "12px",
+                background: "#ffffff",
+                border: "0",
+                borderRadius: "0",
+                fontSize: "13px",
               },
             }}
           />

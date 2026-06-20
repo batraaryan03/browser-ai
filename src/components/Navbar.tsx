@@ -11,7 +11,7 @@ export function Navbar({ onInfoClick, showBack }: NavbarProps) {
   const router = useRouter();
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/[0.04]">
+    <nav className="sticky top-0 z-50 bg-white">
       <div className="mx-auto max-w-5xl px-5 h-12 flex items-center justify-between">
         <button
           onClick={() => router.push("/")}
@@ -21,15 +21,26 @@ export function Navbar({ onInfoClick, showBack }: NavbarProps) {
         </button>
 
         <div className="flex items-center gap-1">
+          {showBack && (
+            <button
+              onClick={() => router.back()}
+              className="flex h-7 w-7 items-center justify-center text-gray-400 hover:text-black transition-colors"
+              title="Back"
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square">
+                <path d="M8.5 2l-4 4.5 4 4.5" />
+              </svg>
+            </button>
+          )}
           {onInfoClick && (
             <button
               onClick={onInfoClick}
-              className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-black/[0.04] transition-all"
+              className="flex h-7 w-7 items-center justify-center text-gray-400 hover:text-black transition-colors"
               title="About"
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square">
                 <circle cx="6.5" cy="6.5" r="5" />
-                <path d="M6.5 5v3M6.5 9.5v.5" />
+                <path d="M6.5 5v3M6.5 10v.5" />
               </svg>
             </button>
           )}

@@ -46,7 +46,6 @@ export default function Home() {
         return;
       }
 
-      // If model already loaded, process immediately
       if (stage === "done" || !modelProgress) {
         const cached = await isModelCached();
         if (cached) {
@@ -55,14 +54,12 @@ export default function Home() {
         }
       }
 
-      // Show download confirmation dialog
       setPendingFile(f);
       setShowDialog(true);
     },
     [stage, modelProgress, startProcess, isModelCached],
   );
 
-  // Dialog confirm — start download + processing
   const handleDialogConfirm = useCallback(() => {
     setShowDialog(false);
     if (pendingFile) {
@@ -74,7 +71,6 @@ export default function Home() {
     }
   }, [pendingFile, pendingText, startProcess, startProcessText]);
 
-  // Dialog cancel
   const handleDialogCancel = useCallback(() => {
     setShowDialog(false);
     setPendingFile(null);
@@ -83,7 +79,6 @@ export default function Home() {
 
   const handleTextPaste = useCallback(
     async (text: string) => {
-      // Check cache first, show dialog if needed
       const cached = await isModelCached();
       if (!cached && !modelProgress) {
         setPendingText(text);
@@ -112,9 +107,8 @@ export default function Home() {
             className="overflow-hidden"
           >
             <div className="mx-auto max-w-lg px-5 pt-3 pb-2">
-              <div className="relative overflow-hidden rounded-2xl border border-black/[0.06] bg-white/80 backdrop-blur-xl p-4">
-                <div className="absolute inset-0 rounded-2xl glass-ring pointer-events-none" />
-                <div className="relative z-10 space-y-1.5 text-xs text-gray-500 leading-relaxed">
+              <div className="bg-white p-4">
+                <div className="space-y-1.5 text-xs text-gray-500 leading-relaxed">
                   <p>
                     <strong className="text-gray-700">100% local.</strong> Your PDF never leaves your device.
                     Uses T5-small (~308 MB) via ONNX Runtime Web.
@@ -128,10 +122,10 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="flex-1 flex flex-col items-center px-5 pt-8 pb-20">
-        {/* Hero — show when idle and no result */}
+        {/* Hero */}
         {stage === "idle" && !result && !error && <HeroSection />}
 
-        {/* Upload zone — show when idle or error and no result */}
+        {/* Upload zone */}
         {(stage === "idle" || stage === "error") && !result && (
           <div className={stage === "idle" ? "mt-8 relative z-10" : "mt-4 relative z-10"}>
             <UploadZone
@@ -155,16 +149,16 @@ export default function Home() {
               exit={{ opacity: 0 }}
               className="w-full max-w-lg mx-auto mt-4 relative z-10"
             >
-              <div className="relative overflow-hidden rounded-xl border border-red-200/60 bg-red-50/60 backdrop-blur-xl px-4 py-3">
+              <div className="bg-white px-4 py-3">
                 <div className="flex items-start gap-2.5">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" className="mt-0.5 shrink-0 text-red-500">
-                    <circle cx="7" cy="7" r="5" /><path d="M7 4.5v3M7 10v.5" />
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="mt-0.5 shrink-0 text-black">
+                    <circle cx="7" cy="7" r="5.5" /><path d="M7 4.5v3M7 10v.5" />
                   </svg>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-red-600">Error</p>
-                    <p className="text-xs text-red-500/70 mt-0.5">{error}</p>
+                    <p className="text-sm font-medium text-black">Error</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{error}</p>
                   </div>
-                  <button onClick={reset} className="text-xs text-red-500 underline underline-offset-2 hover:text-red-600 shrink-0">
+                  <button onClick={reset} className="text-xs text-black underline underline-offset-4 hover:opacity-60 shrink-0">
                     Try again
                   </button>
                 </div>
@@ -173,7 +167,7 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Live Monitor — shows during download / inference */}
+        {/* Live Monitor */}
         <div className="mt-6 relative z-10">
           <LiveMonitor modelProgress={modelProgress} chunkProgress={chunkProgress} stage={stage} />
         </div>
@@ -186,7 +180,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* How it works + History — show when idle, no result, no error */}
+        {/* How it works + History */}
         {stage === "idle" && !result && !error && (
           <div className="relative z-10 w-full flex flex-col items-center">
             <SummaryHistory />

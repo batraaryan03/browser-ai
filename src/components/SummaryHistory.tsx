@@ -62,10 +62,9 @@ export function SummaryHistory() {
           { label: "Pages", value: totalPages },
           { label: "Avg Compression", value: avgCompression > 0 ? `${avgCompression}%` : "—" },
         ].map((s) => (
-          <div key={s.label} className="relative overflow-hidden rounded-xl border border-black/[0.06] bg-white/[0.85] backdrop-blur-xl px-3.5 py-3">
-            <div className="absolute inset-0 rounded-xl glass-ring pointer-events-none" />
-            <p className="relative z-10 text-[10px] font-medium uppercase tracking-wider text-gray-400/60">{s.label}</p>
-            <p className="relative z-10 mt-1 text-lg font-medium">{s.value}</p>
+          <div key={s.label} className="bg-white px-3.5 py-3">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-gray-400">{s.label}</p>
+            <p className="mt-1 text-lg font-medium">{s.value}</p>
           </div>
         ))}
       </div>
@@ -76,11 +75,11 @@ export function SummaryHistory() {
         placeholder="search by filename..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="w-full border-b border-black/[0.06] bg-transparent pb-2 text-sm focus:border-blue-400/40 focus:outline-none transition-colors placeholder:text-gray-400/50"
+        className="w-full border-b border-black/[0.06] bg-transparent pb-2 text-sm focus:border-black/20 focus:outline-none transition-colors placeholder:text-gray-400"
       />
 
       {/* List */}
-      <div className="mt-4 space-y-0 divide-y divide-black/[0.04]">
+      <div className="mt-4 space-y-0">
         <AnimatePresence mode="popLayout">
           {filtered.map((s) => (
             <motion.div
@@ -88,14 +87,14 @@ export function SummaryHistory() {
               layout
               exit={{ opacity: 0, x: -10, scale: 0.97 }}
               transition={{ duration: 0.15 }}
-              className="group flex items-center justify-between py-3"
+              className="group flex items-center justify-between py-3 border-b border-black/[0.04]"
             >
               <button
                 onClick={() => router.push(`/summary/${s.id}`)}
                 className="flex items-center gap-3 min-w-0 text-left flex-1"
               >
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center bg-black/[0.03]">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="text-gray-500">
                     <path d="M9 1v3a1 1 0 001 1h3M3 13h8a2 2 0 002-2V5l-4-4H3a2 2 0 00-2 2v8a2 2 0 002 2z" />
                   </svg>
                 </div>
@@ -106,7 +105,7 @@ export function SummaryHistory() {
                     <span>·</span>
                     <span>{s.summaryWordCount.toLocaleString()} words</span>
                     <span>·</span>
-                    <span className="text-blue-500">{s.compressionRatio}%</span>
+                    <span className="text-black">{s.compressionRatio}%</span>
                   </div>
                 </div>
               </button>
@@ -115,13 +114,13 @@ export function SummaryHistory() {
                 <button
                   onClick={() => handleDelete(s.id)}
                   disabled={deleting === s.id}
-                  className="rounded p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                  className="p-1.5 text-gray-400 hover:text-black transition-colors"
                   aria-label="Delete"
                 >
                   {deleting === s.id ? (
-                    <div className="h-3 w-3 animate-spin rounded-full border border-current border-t-transparent" />
+                    <div className="h-3 w-3 animate-spin border border-current border-t-transparent" />
                   ) : (
-                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"><path d="M3 3.5h7M4.5 3.5V2.5a1 1 0 011-1h2a1 1 0 011 1v1M5 5v4.5M8 5v4.5M2.5 3.5h8" /></svg>
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square"><path d="M3 3.5h7M4.5 3.5V2.5a1 1 0 011-1h2a1 1 0 011 1v1M5 5v4.5M8 5v4.5M2.5 3.5h8" /></svg>
                   )}
                 </button>
               </div>

@@ -45,25 +45,6 @@ export function HeroSection() {
       {/* Animated flowing gradient overlay */}
       <div className="hero-flow" aria-hidden />
 
-      {/*
-        ─── Pexels video background ──────────────────────────────────
-        To add a video background:
-        1. Download a free abstract video from Pexels or Pixabay
-        2. Place it at public/hero-bg.mp4
-        3. Uncomment the <video> tag below and remove the hero-flow div above
-      
-      <video
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="hero-video ready"
-        poster="https://images.unsplash.com/photo-1679900898687-3200929283f5?w=1920&q=80&fm=webp&fit=crop"
-      >
-        <source src="/hero-bg.mp4" type="video/mp4" />
-      </video>
-      */}
-
       {/* Content */}
       <div className="relative z-10 text-center space-y-5 max-w-lg mx-auto pt-16 pb-20">
         <p className="text-xs font-medium uppercase tracking-[0.15em] text-gray-400">
@@ -80,7 +61,7 @@ export function HeroSection() {
           Upload any PDF —{" "}
           <span className="inline-block min-w-[9em] text-gray-700">
             {text}
-            <span className="animate-caret text-blue-500">|</span>
+            <span className="animate-caret text-black">|</span>
           </span>
           <br />
           and get a clear, intelligent summary in seconds.
@@ -88,22 +69,22 @@ export function HeroSection() {
 
         <div className="flex items-center justify-center gap-3 pt-2">
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-400">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-emerald-500">
-              <path d="M2 5l2 2 4-4" />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="text-black">
+              <path d="M2 5l2 3 4-5" />
             </svg>
             No uploads to servers
           </span>
           <span className="w-px h-3 bg-gray-300/50" />
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-400">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-emerald-500">
-              <path d="M2 5l2 2 4-4" />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="text-black">
+              <path d="M2 5l2 3 4-5" />
             </svg>
             Runs in your browser
           </span>
           <span className="w-px h-3 bg-gray-300/50" />
           <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-400">
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" className="text-emerald-500">
-              <path d="M2 5l2 2 4-4" />
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square" className="text-black">
+              <path d="M2 5l2 3 4-5" />
             </svg>
             Free & private
           </span>
