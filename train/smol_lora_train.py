@@ -209,6 +209,7 @@ def train(args):
             lr_scheduler_type="linear",
             seed=3407,
             output_dir=os.path.join(args.output, "checkpoints"),
+            save_strategy="no",  # 👈 Add this line here
             report_to="none",
         ),
     )
