@@ -10,16 +10,19 @@ Requirements:
     pip install unsloth trl accelerate torch transformers
 
 Usage:
-    python train/smol_lora_train.py --data ./my-book.txt
+    python train/smol_lora_train.py --data ./my-book.txt --export-onnx
 
 Output:
-    output/personality/        ← merged model directory (for serving)
-    output/personality.onnx    ← ONNX export (for browser inference, optional)
+    output/personality/          ← merged model directory (PyTorch)
+    output/personality-onnx/     ← ONNX export (for browser inference)
 
-The merged model can be served locally:
-    python train/serve.py
+The ONNX model can be uploaded to the browser Chat page for
+fully client-side inference — no server needed:
+    https://browser-ai.vercel.app/models/chat
 
-Then open http://localhost:8000 in your browser to chat.
+Or use the Colab notebook:
+    https://colab.research.google.com/github/batraaryan03/browser-ai/
+    blob/main/train/smol_lora_train.ipynb
 """
 
 import argparse
@@ -46,7 +49,6 @@ except ImportError:
 def parse_args():
     parser = argparse.ArgumentParser(description="SmolLM2 LoRA Personality Trainer")
     parser.add_argument("--data", required=True, help="Path to training text file (.txt)")
-    parser.add_argument("--epochs", type=int, default=3, help="Training epochs (default: 3)")
     parser.add_argument("--output", default="./output", help="Output directory (default: ./output)")
     parser.add_argument("--lora-rank", type=int, default=16, help="LoRA rank (default: 16)")
     parser.add_argument("--max-seq-length", type=int, default=2048, help="Max sequence length (default: 2048)")
@@ -260,23 +262,45 @@ def train(args):
     
     # ─── Export to ONNX (optional) ───────────────────────────────────
     if args.export_onnx:
-        print("🔄 Exporting to ONNX...")
+        print("🔄 Exporting to ONNX for browser inference...")
+        onnx_path = os.path.join(args.output, "personality-onnx")
+        
         try:
-            from optimum.exporters import TasksManager
-            from optimum.exporters.onnx import export, OnnxConfigWithPast
-            
-            onnx_path = os.path.join(args.output, "personality.onnx")
-            
-            # Export using optimum
-            export(
-                model_id=merged_path,
-                output=onnx_path,
-                task="text-generation-with-past",
-                framework="pt",
-            )
-            print(f"   ✓ ONNX exported to: {onnx_path}")
+            import subprocess
+            cmd = [
+                "optimum-cli", "export", "onnx",
+                "--model", merged_path,
+                "--task", "text-generation-with-past",
+                onnx_path,
+            ]
+            print(f"   Running: {' '.join(cmd)}")
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"   ✓ ONNX exported to: {onnx_path}")
+                size_mb = sum(f.stat().st_size for f in Path(onnx_path).rglob("*")) / 1e6
+                print(f"   Size: {size_mb:.0f} MB")
+                
+                # Create a ZIP for easy browser upload
+                import shutil
+                zip_path = os.path.join(args.output, "personality-onnx.zip")
+                shutil.make_archive(
+                    os.path.join(args.output, "personality-onnx"),
+                    "zip",
+                    onnx_path,
+                )
+                zip_size = os.path.getsize(zip_path) / 1e6
+                print(f"   📦 Zipped: {zip_path} ({zip_size:.0f} MB)")
+            else:
+                print(f"   ❌ ONNX export failed:")
+                print(f"   {result.stderr[:500]}")
+                print()
+                print("   Try running manually:")
+                print(f"   optimum-cli export onnx --model {merged_path} --task text-generation-with-past {onnx_path}")
         except ImportError:
             print("   ⚠  optimum not installed. Skipping ONNX export.")
+            print("     pip install optimum[onnx]")
+        except FileNotFoundError:
+            print("   ⚠  optimum-cli not found. Install with:")
             print("     pip install optimum[onnx]")
     
     print()
@@ -284,11 +308,13 @@ def train(args):
     print("  ✅ Pipeline complete!")
     print("=" * 60)
     print()
-    print(f"  Next step: Serve your personality model")
+    print(f"  Next steps:")
     print()
-    print(f"     python train/serve.py --model {merged_path}")
+    print(f"  1. Upload '{os.path.join(args.output, 'personality-onnx')}' to the Chat page")
+    print(f"  2. Open https://browser-ai.100xsystems.dev/models/chat")
+    print(f"  3. Upload the ZIP file and chat with your personality!")
     print()
-    print("  Then open http://localhost:8000 in your browser")
+    print(f"  All inference runs in your browser — no server needed.")
     print()
     
     return 0

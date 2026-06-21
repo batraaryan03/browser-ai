@@ -7,33 +7,43 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
+import { OnnxChat, type ModelConfig } from "@/lib/onnx-chat";
+import { type TokenizerConfig } from "@/lib/bpe-tokenizer";
+import { unzip } from "fflate";
+
+// ── Types ────────────────────────────────────────────────────────────
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
-interface ServerInfo {
-  status: string;
-  model: string;
-  device: string;
-  metadata?: {
-    style_description?: string;
-    char_count?: number;
-    word_count?: number;
-    training_minutes?: number;
-    trained_at?: string;
-  };
+interface ModelFiles {
+  /** model.onnx file */
+  onnx: ArrayBuffer;
+  /** config.json */
+  config: ModelConfig;
+  /** tokenizer.json */
+  tokenizer: TokenizerConfig;
+  /** metadata.json (optional) */
+  metadata?: Record<string, unknown>;
 }
 
-const SERVER_URL = "http://localhost:8000";
+// ── Helpers ──────────────────────────────────────────────────────────
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(0)} MB`;
+}
+
+// ── Sub-components ───────────────────────────────────────────────────
 
 function CursorBlink() {
   return <span className="inline-block h-4 w-[2px] bg-gray-400 animate-caret align-middle" />;
 }
 
 function MessageContent({ content, isStreaming }: { content: string; isStreaming?: boolean }) {
-  // If it's a streaming message in progress, show raw text with cursor
   if (isStreaming) {
     return (
       <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -43,8 +53,15 @@ function MessageContent({ content, isStreaming }: { content: string; isStreaming
     );
   }
 
-  // If content looks like plain text (no markdown syntax), render as plain text
-  if (!content.includes("```") && !content.includes("**") && !content.includes("__") && !content.includes("* ") && !content.match(/^#{1,6}\s/m)) {
+  const hasMarkdown =
+    content.includes("```") ||
+    content.includes("**") ||
+    content.includes("__") ||
+    content.includes("* ") ||
+    content.includes("- ") ||
+    content.match(/^#{1,6}\s/m);
+
+  if (!hasMarkdown) {
     return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
   }
 
@@ -55,139 +72,209 @@ function MessageContent({ content, isStreaming }: { content: string; isStreaming
   );
 }
 
+// ── Main Page ────────────────────────────────────────────────────────
+
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Connect to your personality model server to start chatting." },
-  ]);
+  // Model state
+  const [modelFiles, setModelFiles] = useState<ModelFiles | null>(null);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [chat, setChat] = useState<OnnxChat | null>(null);
+  const [loadingModel, setLoadingModel] = useState(false);
+  const [loadProgress, setLoadProgress] = useState("");
+
+  // Chat state
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(
-    "You are an AI trained to adopt the writing style, tone, and personality of the text provided during training. Respond naturally as if you are that persona."
+    "You are an AI trained to adopt the writing style, tone, and personality of the text provided during training. Respond naturally as if you are that persona.",
   );
+  const [modelName, setModelName] = useState("");
+
+  // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
-  const connectToServer = useCallback(async () => {
-    setConnecting(true);
-    try {
-      const res = await fetch(`${SERVER_URL}/health`);
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
-      const info: ServerInfo = await res.json();
-      setServerInfo(info);
-      setConnected(true);
-      const greeting = info.metadata?.style_description
-        ? `Connected! I'm trained to channel the personality behind your text. Ask me anything — I'll respond in that voice.`
-        : "Connected! Ready to chat in my trained personality.";
-      setMessages([{ role: "assistant", content: greeting }]);
-      toast.success("Connected to personality model server");
-    } catch {
-      toast.error("Could not connect to server. Make sure serve.py is running on port 8000.");
-    } finally {
-      setConnecting(false);
+  // ── File upload / ZIP extraction ─────────────────────────────────
+
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset file input so re-uploading same file triggers change
+    e.target.value = "";
+
+    if (!file.name.endsWith(".zip")) {
+      toast.error("Please upload a .zip file containing your model");
+      return;
     }
-  }, []);
 
-  const sendMessage = useCallback(async () => {
-    const text = input.trim();
-    if (!text || loading) return;
-
-    setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: text }]);
-    setLoading(true);
-    setIsStreaming(true);
-    setStreamingContent("");
-
-    // Build conversation history (last 9 previous messages for context)
-    // The current message is sent separately via the `message` field
-    const historyMessages = messages
-      .slice(-9)
-      .map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
+    setLoadingModel(true);
+    setLoadProgress("Reading ZIP file...");
 
     try {
-      const res = await fetch(`${SERVER_URL}/api/chat/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: text,
-          messages: historyMessages,
-          system_prompt: systemPrompt || null,
-          max_tokens: 512,
-          temperature: 0.7,
-        }),
-        signal: controller.signal,
+      const zipBuffer = await file.arrayBuffer();
+      const zipData = new Uint8Array(zipBuffer);
+
+      setLoadProgress("Extracting model files...");
+
+      // Extract ZIP using fflate
+      const files = await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
+        unzip(zipData, (err, contents) => {
+          if (err) reject(new Error("Failed to extract ZIP: " + err.message));
+          else resolve(contents as Record<string, Uint8Array>);
+        });
       });
 
-      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      // Find model files
+      const fileMap = new Map<string, Uint8Array>();
+      for (const [name, data] of Object.entries(files)) {
+        // Strip directory prefix (e.g., "personality/model.onnx" → "model.onnx")
+        const basename = name.split("/").pop() || name;
+        fileMap.set(basename, data);
+      }
 
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error("No response body");
+      // Check for required files
+      let onnxFile = fileMap.get("model.onnx");
+      if (!onnxFile) {
+        // Try to find any .onnx file
+        const onnxEntry = Object.entries(files).find(([name]) => name.endsWith(".onnx"));
+        if (!onnxEntry) {
+          throw new Error("No .onnx model file found in the ZIP. Make sure to export with optimum-cli.");
+        }
+        onnxFile = onnxEntry[1];
+      }
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let fullResponse = "";
+      const configData = fileMap.get("config.json");
+      if (!configData) throw new Error("No config.json found in the ZIP");
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      const tokenizerData = fileMap.get("tokenizer.json");
+      if (!tokenizerData) throw new Error("No tokenizer.json found in the ZIP");
 
-        buffer += decoder.decode(value, { stream: true });
+      // Parse JSON files
+      setLoadProgress("Parsing model configuration...");
+      const config: ModelConfig = JSON.parse(new TextDecoder().decode(configData));
+      const tokenizerJson: TokenizerConfig = JSON.parse(new TextDecoder().decode(tokenizerData));
 
-        // Parse SSE events
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+      // Optional metadata
+      let metadata: Record<string, unknown> | undefined;
+      const metaData = fileMap.get("metadata.json");
+      if (metaData) {
+        metadata = JSON.parse(new TextDecoder().decode(metaData));
+      }
 
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.token) {
-                fullResponse += data.token;
-                setStreamingContent(fullResponse);
-              }
-              if (data.done && data.full) {
-                fullResponse = data.full;
-              }
-            } catch {
-              // Skip malformed events
-            }
-          }
+      // Also find external data files (for models > 2GB)
+      const externalDataFiles: Array<{ name: string; data: Uint8Array }> = [];
+      for (const [name, data] of Object.entries(files)) {
+        if (name.endsWith(".onnx.data")) {
+          externalDataFiles.push({ name, data });
         }
       }
 
-      const finalContent = fullResponse.trim() || "(no response)";
-      setMessages((prev) => [...prev, { role: "assistant", content: finalContent }]);
-    } catch (err: unknown) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // User cancelled — fine, keep what we have
-        return;
+      if (externalDataFiles.length > 0) {
+        setLoadProgress(`Found ${externalDataFiles.length} external data file(s). Loading model...`);
       }
-      toast.error("Lost connection to server. Reconnect to continue.");
-      setConnected(false);
+
+      // Get the ONNX buffer as a proper ArrayBuffer
+      const onnxBuffer = onnxFile.buffer.slice(
+        onnxFile.byteOffset,
+        onnxFile.byteOffset + onnxFile.byteLength,
+      ) as ArrayBuffer;
+
+      // Use model name from metadata or config
+      const name = metadata?.style_description
+        ? (metadata.style_description as string).slice(0, 40)
+        : config.model_type || "Personality Model";
+      setModelName(name);
+
+      // Create OnnxChat instance
+      setLoadProgress("Loading model into browser... (this may take a moment)");
+      const chatInstance = await OnnxChat.create(onnxBuffer, config, tokenizerJson);
+
+      setChat(chatInstance);
+      setModelLoaded(true);
+      setModelFiles({ onnx: onnxBuffer, config, tokenizer: tokenizerJson, metadata });
+
+      setMessages([
+        {
+          role: "assistant",
+          content: metadata?.style_description
+            ? `I'm trained to channel a unique personality. Ask me anything — I'll respond in that voice.`
+            : "Model loaded! I'm ready to chat. What's on your mind?",
+        },
+      ]);
+
+      toast.success("Model loaded! Ready to chat.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load model");
+      setModelLoaded(false);
+      setChat(null);
     } finally {
-      setLoading(false);
+      setLoadingModel(false);
+      setLoadProgress("");
+    }
+  }, []);
+
+  // ── Send / generate ─────────────────────────────────────────────
+
+  const sendMessage = useCallback(async () => {
+    const text = input.trim();
+    if (!text || generating || !chat) return;
+
+    setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: text }]);
+    setGenerating(true);
+    setIsStreaming(true);
+    setStreamingContent("");
+
+    // Conversation history (last 9 messages for context)
+    const historyMessages = messages
+      .slice(-9)
+      .map((m) => ({ role: m.role, content: m.content }));
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const response = await chat.generate(text, {
+        maxTokens: 512,
+        temperature: 0.7,
+        topP: 0.9,
+        repetitionPenalty: 1.1,
+        systemPrompt: systemPrompt || undefined,
+        messages: historyMessages,
+        signal: controller.signal,
+        onToken: (partial) => {
+          setStreamingContent(partial);
+        },
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: response || "(no response)" },
+      ]);
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return;
+      toast.error("Generation failed. Try again.");
+    } finally {
+      setGenerating(false);
       setIsStreaming(false);
       setStreamingContent("");
-      abortControllerRef.current = null;
+      abortRef.current = null;
     }
-  }, [input, loading, messages, systemPrompt]);
+  }, [input, generating, messages, chat, systemPrompt]);
+
+  // ── Input handlers ──────────────────────────────────────────────
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -196,7 +283,6 @@ export default function ChatPage() {
     }
   };
 
-  // Auto-resize textarea
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
     const el = e.target;
@@ -204,14 +290,7 @@ export default function ChatPage() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
-  const formatDate = (dateStr?: string) => {
-    if (!dateStr) return "";
-    try {
-      return new Date(dateStr).toLocaleDateString();
-    } catch {
-      return dateStr;
-    }
-  };
+  // ── Render ──────────────────────────────────────────────────────
 
   return (
     <div className="relative min-h-dvh flex flex-col bg-[var(--bg)]">
@@ -222,79 +301,119 @@ export default function ChatPage() {
           <div className="text-center space-y-2 shrink-0">
             <h1 className="text-2xl font-medium tracking-tight">Personality Chat</h1>
             <p className="text-sm text-gray-400">
-              Talk to your fine-tuned personality model. It runs on your machine —
-              nothing leaves your device.
+              Upload your trained model and chat with it entirely in your browser.
+              No server needed — everything runs on your machine.
             </p>
           </div>
 
-          {/* Connection card */}
-          {!connected && (
+          {/* Upload card (shown when no model loaded) */}
+          {!modelLoaded && !loadingModel && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white px-5 py-5 space-y-4 shrink-0"
+              className="bg-white px-5 py-6 space-y-4 shrink-0"
             >
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <p className="text-sm text-gray-600">
-                  Start the personality server on your machine, then connect below.
+                  Train a personality model, then upload the ZIP containing the ONNX export.
+                  The model runs locally in your browser — nothing leaves your device.
                 </p>
-                <div className="text-xs text-gray-400 font-mono bg-black/[0.02] px-3 py-2 leading-relaxed">
-                  python train/serve.py --model ./output/personality
-                </div>
+                <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside leading-relaxed">
+                  <li>Train a model using the <strong>BYO GPU</strong> pipeline (or Colab)</li>
+                  <li>Export to ONNX with <span className="font-mono">--export-onnx</span></li>
+                  <li>Download the ZIP from <span className="font-mono">./output/</span></li>
+                  <li>Upload it here and start chatting</li>
+                </ol>
               </div>
 
-              <button
-                onClick={connectToServer}
-                disabled={connecting}
-                className="w-full bg-black text-white py-2.5 text-xs font-medium uppercase tracking-wider hover:opacity-85 transition-opacity disabled:opacity-40 active:scale-[0.98] transition-transform duration-100"
+              <div className="border-2 border-dashed border-black/[0.08] px-5 py-8 text-center hover:border-black/[0.2] transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
               >
-                {connecting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="inline-block h-1 w-4 bg-white/30 animate-pulse" />
-                    Connecting...
-                  </span>
-                ) : (
-                  "Connect to Server"
-                )}
-              </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".zip"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <svg
+                  width="24" height="24" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="1" strokeLinecap="square"
+                  className="mx-auto mb-3 text-gray-300"
+                >
+                  <path d="M12 3v12M8 11l4 4 4-4" />
+                  <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" />
+                </svg>
+                <p className="text-sm text-gray-500">
+                  Click to upload your <strong>model ZIP</strong>
+                </p>
+                <p className="text-[10px] text-gray-300 mt-1">
+                  Contains model.onnx, config.json, tokenizer.json
+                </p>
+              </div>
 
-              <p className="text-[10px] text-gray-300 text-center">
-                The server must be running at{" "}
-                <span className="font-mono">localhost:8000</span>
+              <div className="bg-black/[0.02] px-4 py-3">
+                <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
+                  python train/smol_lora_train.py --data ./book.txt --steps 60
+                </p>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Loading card */}
+          {loadingModel && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-white px-5 py-8 text-center shrink-0"
+            >
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <span className="inline-block h-2 w-2 bg-black rounded-full animate-pulse" />
+                <span className="inline-block h-2 w-2 bg-black rounded-full animate-pulse" style={{ animationDelay: "0.15s" }} />
+                <span className="inline-block h-2 w-2 bg-black rounded-full animate-pulse" style={{ animationDelay: "0.3s" }} />
+              </div>
+              <p className="text-sm text-gray-500">{loadProgress}</p>
+              <p className="text-[10px] text-gray-300 mt-2">
+                Loading a ~700 MB model into browser memory...
               </p>
             </motion.div>
           )}
 
-          {/* Server info bar */}
-          {connected && serverInfo && (
+          {/* Info bar (when model loaded) */}
+          {modelLoaded && (
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white px-4 py-2.5 flex items-center justify-between shrink-0"
             >
-              <div className="flex items-center gap-2">
-                <span className="inline-block h-2 w-2 bg-green-500 rounded-full" />
-                <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">
-                  Connected
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="inline-block h-2 w-2 bg-green-500 rounded-full shrink-0" />
+                <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider shrink-0">
+                  Model Ready
                 </span>
-                <span className="text-[10px] text-gray-300">·</span>
-                <span className="text-[10px] text-gray-400">{serverInfo.device}</span>
+                <span className="text-[10px] text-gray-300 shrink-0">·</span>
+                <span className="text-[10px] text-gray-400 truncate">
+                  {modelName}
+                </span>
               </div>
-              <div className="flex items-center gap-3">
-                {serverInfo.metadata && (
-                  <span className="text-[10px] text-gray-400">
-                    {serverInfo.metadata.char_count?.toLocaleString()} chars
-                    {serverInfo.metadata.trained_at && (
-                      <> · {formatDate(serverInfo.metadata.trained_at)}</>
-                    )}
-                  </span>
-                )}
+              <div className="flex items-center gap-3 shrink-0">
                 <button
                   onClick={() => setShowSystemPrompt(!showSystemPrompt)}
                   className="text-[10px] text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-wider"
                 >
                   {showSystemPrompt ? "Hide" : "System"}
+                </button>
+                <button
+                  onClick={() => {
+                    setModelLoaded(false);
+                    setChat(null);
+                    setMessages([]);
+                    setModelFiles(null);
+                    setModelName("");
+                  }}
+                  className="text-[10px] text-red-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+                >
+                  Unload
                 </button>
               </div>
             </motion.div>
@@ -302,7 +421,7 @@ export default function ChatPage() {
 
           {/* System prompt editor */}
           <AnimatePresence>
-            {connected && showSystemPrompt && (
+            {modelLoaded && showSystemPrompt && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
@@ -322,7 +441,7 @@ export default function ChatPage() {
                     placeholder="Describe how the model should behave..."
                   />
                   <p className="text-[10px] text-gray-300">
-                    This instruction is prepended to every conversation. It guides how the personality responds.
+                    This instruction guides how the personality responds. It's prepended to every conversation.
                   </p>
                 </div>
               </motion.div>
@@ -330,22 +449,23 @@ export default function ChatPage() {
           </AnimatePresence>
 
           {/* Messages area */}
-          {connected && (
+          {modelLoaded && (
             <div className="flex-1 bg-white overflow-y-auto space-y-0">
+              {messages.length === 0 && (
+                <div className="px-4 py-8 text-center">
+                  <p className="text-xs text-gray-300">Send a message to start chatting.</p>
+                </div>
+              )}
+
               {messages.map((msg, i) => (
                 <motion.div
                   key={i}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2 }}
-                  className={`px-4 py-3 ${
-                    msg.role === "assistant"
-                      ? "bg-black/[0.01]"
-                      : ""
-                  }`}
+                  className={`px-4 py-3 ${msg.role === "assistant" ? "bg-black/[0.01]" : ""}`}
                 >
                   <div className="flex items-start gap-3">
-                    {/* Role indicator */}
                     <div className="shrink-0 mt-0.5">
                       {msg.role === "assistant" ? (
                         <div className="h-6 w-6 flex items-center justify-center bg-black text-[10px] text-white font-medium">
@@ -357,8 +477,6 @@ export default function ChatPage() {
                         </div>
                       )}
                     </div>
-
-                    {/* Content */}
                     <div className="flex-1 min-w-0 pt-0.5">
                       <p className="text-[10px] text-gray-300 font-medium uppercase tracking-wider mb-1">
                         {msg.role === "assistant" ? "Model" : "You"}
@@ -392,8 +510,8 @@ export default function ChatPage() {
                 </motion.div>
               )}
 
-              {/* Loading dots (when streaming hasn't started yet) */}
-              {loading && !streamingContent && (
+              {/* Loading dots (before streaming starts) */}
+              {generating && !streamingContent && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -424,7 +542,7 @@ export default function ChatPage() {
           )}
 
           {/* Input area */}
-          {connected && (
+          {modelLoaded && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -442,9 +560,9 @@ export default function ChatPage() {
                   style={{ minHeight: "44px", maxHeight: "120px" }}
                 />
               </div>
-              {loading ? (
+              {generating ? (
                 <button
-                  onClick={() => abortControllerRef.current?.abort()}
+                  onClick={() => abortRef.current?.abort()}
                   className="bg-red-500/10 text-red-500 px-3 h-[44px] flex items-center justify-center hover:bg-red-500/20 transition-colors shrink-0 active:scale-[0.97] transition-transform duration-100"
                   title="Stop generation"
                 >
@@ -475,12 +593,12 @@ export default function ChatPage() {
           )}
 
           {/* Footer info */}
-          {connected && (
+          {modelLoaded && (
             <div className="bg-white px-4 py-3 shrink-0">
               <p className="text-[10px] text-gray-400 leading-relaxed">
                 Powered by <strong>SmolLM2-360M-Instruct</strong> fine-tuned with LoRA.
-                The model runs on your machine — no data leaves your device.
-                Responses stream in real-time via the local server.
+                Runs entirely in your browser via{" "}
+                <strong>ONNX Runtime Web</strong> — no data leaves your device.
               </p>
             </div>
           )}
