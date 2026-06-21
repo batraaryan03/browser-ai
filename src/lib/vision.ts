@@ -5,7 +5,7 @@
  * Cache API, and runs via ONNX Runtime (WebAssembly/WebGPU).
  *
  * Supported pipelines:
- *   - image-classification  → Xenova/mobilenet-v2  (~25 MB)
+ *   - image-classification  → Xenova/vit-base-patch16-224  (~80 MB q4)
  *   - object-detection      → Xenova/yolos-tiny    (~40 MB)
  *   - image-segmentation    → Xenova/segformer-b0-finetuned-ade-512-512  (~15 MB)
  *   - image-to-text (OCR)   → Xenova/trocr-base-printed  (~330 MB)
@@ -49,10 +49,10 @@ export interface VisionModelConfig {
 export const VISION_MODELS: Record<string, VisionModelConfig> = {
   classify: {
     task: "image-classification",
-    modelId: "Xenova/mobilenet-v2",
-    name: "MobileNet-v2",
-    sizeBytes: 25_000_000,
-    dtype: "fp32",
+    modelId: "Xenova/vit-base-patch16-224",
+    name: "ViT-base-patch16-224",
+    sizeBytes: 80_000_000,
+    dtype: "q4",
   },
   detect: {
     task: "object-detection",

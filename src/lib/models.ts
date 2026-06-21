@@ -65,13 +65,13 @@ const MODELS: ModelInfo[] = [
     slug: "classify",
     name: "Image Classifier",
     description:
-      "Classify any image into 1,000 ImageNet categories. Uses MobileNet-v2 (~25 MB) via Transformers.js. Runs entirely in-browser with ONNX Runtime Web.",
+      "Classify any image into 1,000 ImageNet categories. Uses ViT-base-patch16-224 (~80 MB q4) via Transformers.js. Runs entirely in-browser with ONNX Runtime Web.",
     category: "vision",
-    repo: "Xenova/mobilenet-v2",
-    sizeBytes: 25_000_000,
+    repo: "Xenova/vit-base-patch16-224",
+    sizeBytes: 80_000_000,
     task: "image-classification",
     offlineCapable: true,
-    dtype: "fp32",
+    dtype: "q4",
     enabled: true,
   },
   {

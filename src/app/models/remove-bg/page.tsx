@@ -5,7 +5,12 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import { removeBackground, isBgRemovalLoaded, loadBgRemovalModel, releaseBgRemovalModel, type BgRemovalProgress } from "@/lib/background-removal";
+import {
+  removeBackground,
+  isBgRemovalLoaded,
+  releaseBgRemovalModel,
+  type BgRemovalProgress,
+} from "@/lib/background-removal";
 import { getModel } from "@/lib/models";
 import { createThrottledProgress } from "@/lib/models";
 
@@ -18,6 +23,7 @@ export default function RemoveBgPage() {
   const [loadState, setLoadState] = useState<{
     status: "idle" | "downloading" | "compiling" | "processing" | "ready" | "error";
     progress: number;
+    label?: string;
     error?: string;
   }>({ status: "idle", progress: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -26,21 +32,28 @@ export default function RemoveBgPage() {
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; releaseBgRemovalModel(); };
+    return () => {
+      mountedRef.current = false;
+      // Release session to free GPU memory.
+      // Cached ONNX bytes survive in Cache API and will be reused next visit.
+      releaseBgRemovalModel();
+    };
   }, []);
 
   const handleBgProgress = useCallback((p: BgRemovalProgress) => {
     if (!mountedRef.current) return;
     const throttled = throttledRef.current(p.progress);
     if (throttled !== null) {
-      setLoadState({
+      setLoadState((prev) => ({
+        ...prev,
         status: p.status,
         progress: throttled,
+        label: p.label,
         error: p.error,
-      });
+      }));
     }
     if (p.status === "ready") {
-      setLoadState({ status: "ready", progress: 100 });
+      setLoadState({ status: "ready", progress: 100, label: "Done!" });
     }
     if (p.status === "error") {
       setLoadState({ status: "error", progress: 0, error: p.error });
@@ -68,7 +81,7 @@ export default function RemoveBgPage() {
     setProcessing(true);
 
     try {
-      // The removeBackground function automatically loads the model
+      // New simplified API — no strength parameter
       const resultDataUrl = await removeBackground(image, handleBgProgress);
       if (!mountedRef.current) return;
 
@@ -99,11 +112,16 @@ export default function RemoveBgPage() {
   }, []);
 
   const isReady = loadState.status === "ready" || isBgRemovalLoaded();
-  const progress =
+  const showProgress =
+    loadState.status === "downloading" ||
+    loadState.status === "compiling" ||
+    (processing && loadState.status === "processing");
+
+  const progressValue =
     loadState.status === "downloading" ? Math.round(loadState.progress) :
     loadState.status === "compiling" ? 98 :
     processing ? Math.round(loadState.progress) :
-    null;
+    0;
 
   return (
     <div className="relative min-h-dvh flex flex-col bg-[var(--bg)]">
@@ -114,27 +132,31 @@ export default function RemoveBgPage() {
             <h1 className="text-2xl font-medium tracking-tight">Background Removal</h1>
             <p className="text-sm text-gray-400">
               Remove backgrounds from portraits and photos using <strong>RMBG-1.4</strong> ({modelInfo ? `${(modelInfo.sizeBytes / 1_000_000).toFixed(0)} MB` : "44 MB"} ONNX).
-              Powered by <strong>ONNX Runtime Web</strong> — runs entirely in-browser with WebGPU acceleration.
+              Powered by <strong>ONNX Runtime Web</strong> — runs entirely in-browser with WebGPU.
             </p>
           </div>
 
-          {/* Download / processing progress */}
-          {progress !== null && (
-            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-3 space-y-1.5">
+          {/* Unified progress bar */}
+          {showProgress && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white p-4 space-y-2"
+            >
               <div className="flex items-center justify-between text-[10px] text-gray-400">
-                <span>
-                  {loadState.status === "downloading" ? "Downloading model (44 MB)..." :
-                   loadState.status === "compiling" ? "Compiling model..." :
-                   processing ? "Removing background..." : ""}
-                </span>
-                <span>{Math.min(progress, 99)}%</span>
+                <span>{loadState.label || (
+                  loadState.status === "downloading" ? "Downloading model (44 MB)..." :
+                  loadState.status === "compiling" ? (loadState.progress === 80 ? "Loading cached model..." : "Compiling model...") :
+                  "Processing..."
+                )}</span>
+                <span className="tabular-nums">{Math.min(progressValue, 99)}%</span>
               </div>
-              <div className="h-1 bg-black/[0.04]">
+              <div className="h-1.5 bg-black/[0.04]">
                 <motion.div
                   className="h-full bg-black"
                   initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(progress, 100)}%` }}
-                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  animate={{ width: `${Math.min(progressValue, 100)}%` }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
                 />
               </div>
             </motion.div>
@@ -142,7 +164,7 @@ export default function RemoveBgPage() {
 
           {loadState.status === "error" && (
             <div className="bg-white p-4">
-              <p className="text-[11px] text-black/60">Error loading model: {loadState.error}</p>
+              <p className="text-[11px] text-black/60">Error: {loadState.error}</p>
               <button onClick={() => processImage()} className="mt-2 text-[10px] text-black underline underline-offset-4">Retry</button>
             </div>
           )}
@@ -164,27 +186,19 @@ export default function RemoveBgPage() {
             </div>
           )}
 
-          {image && !result && !processing && (
+          {image && !result && !showProgress && (
             <div className="space-y-4">
               <div className="bg-white p-4">
                 <img src={image} alt="Uploaded" className="w-full h-auto max-h-80 object-contain" />
               </div>
+
               <button
                 onClick={processImage}
                 disabled={loadState.status !== "idle" && !isReady}
                 className="w-full bg-black text-white px-4 py-2.5 text-xs font-medium uppercase tracking-wider hover:opacity-80 transition-opacity disabled:opacity-40"
               >
-                {loadState.status === "idle" ? "Load Model & Remove Background" :
-                 loadState.status === "downloading" ? `Downloading model... ${progress ?? 0}%` :
-                 loadState.status === "compiling" ? "Compiling model..." :
-                 "Remove Background"}
+                Remove Background
               </button>
-            </div>
-          )}
-
-          {processing && (
-            <div className="bg-white p-4 text-center">
-              <p className="text-[10px] text-gray-400 uppercase tracking-wider">Processing — this may take a moment...</p>
             </div>
           )}
 
@@ -207,8 +221,9 @@ export default function RemoveBgPage() {
 
           <div className="bg-white px-4 py-3">
             <p className="text-[10px] text-gray-400 leading-relaxed">
-              Powered by <strong>briaai/RMBG-1.4</strong> (~44 MB quantized ONNX) via ONNX Runtime Web with WebGPU acceleration.
-              The model downloads once from Hugging Face and runs entirely in your browser. No data leaves your device.
+              Powered by <strong>briaai/RMBG-1.4</strong> (~44 MB quantized ONNX) via ONNX Runtime Web.
+              The model downloads once and caches in your browser. Subsequent visits load instantly from cache.
+              No data leaves your device.
             </p>
           </div>
         </div>

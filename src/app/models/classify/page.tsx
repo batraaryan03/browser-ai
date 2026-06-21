@@ -197,7 +197,7 @@ export default function ClassifyPage() {
 
           <div className="bg-white px-4 py-3">
             <p className="text-[10px] text-gray-400 leading-relaxed">
-              Powered by <strong>Xenova/mobilenet-v2</strong> (~{modelInfo ? `${(modelInfo.sizeBytes / 1_000_000).toFixed(0)}` : "25"} MB) via Transformers.js.
+              Powered by <strong>Xenova/vit-base-patch16-224</strong> (~{modelInfo ? `${(modelInfo.sizeBytes / 1_000_000).toFixed(0)}` : "80"} MB) via Transformers.js.
               Model downloads once from Hugging Face and caches in your browser. No data leaves your device.
             </p>
           </div>
