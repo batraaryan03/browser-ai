@@ -11,6 +11,7 @@ const MODEL_NAMES: Record<string, string> = {
   detect: "Object Detection",
   segment: "Image Segmentation",
   train: "Model Training",
+  chat: "Personality Chat",
   "train/personality": "Import Personality",
 };
 

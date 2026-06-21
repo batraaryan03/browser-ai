@@ -15,31 +15,30 @@ export default function GPUTrainPage() {
   return (
     <div className="relative min-h-dvh flex flex-col bg-[var(--bg)]">
       <Navbar />
-
       <main className="flex-1 flex flex-col items-center px-5 pt-8 pb-20">
         <div className="w-full max-w-2xl mx-auto space-y-8">
           {/* Header */}
           <div className="text-center space-y-2">
             <h1 className="text-2xl font-medium tracking-tight">Bring Your Own GPU</h1>
             <p className="text-sm text-gray-400">
-              Train advanced models on your own hardware. You own the weights. No cloud costs. No limits.
-              Everything runs locally from our training scripts.
+              Fine-tune SmolLM2-360M on your text using your own GPU. In ~15-30 minutes,
+              you get a unique AI personality that writes in your training style.
             </p>
           </div>
 
-          {/* The only method: Clone the repo and run */}
+          {/* Local Python method */}
           <div className="bg-white">
             <div className="border-b border-black/[0.04] px-5 py-4 flex items-center justify-between">
               <div>
                 <h2 className="text-sm font-medium">Local Python (Mac / Linux / Windows)</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Requires Python 3.10+ and a CUDA-capable NVIDIA GPU (or use CPU for small jobs).
+                  Requires Python 3.10+, a CUDA-capable GPU (4GB+ VRAM), or use CPU for slower training.
                   All training scripts are in this repo.
                 </p>
               </div>
               <button
                 onClick={() => copyText(
-                  `# Clone the repo\ngit clone ${REPO_URL}.git\ncd browser-ai\n\n# Create virtual environment\npython3 -m venv .venv\nsource .venv/bin/activate  # or .venv\\Scripts\\activate on Windows\n\n# Install dependencies\npip install torch transformers peft accelerate\n\n# Run training\npython train/lora_train.py --model t5-small --epochs 3 --data ./my-data.txt`
+                  `# Clone the repo\ngit clone ${REPO_URL}.git\ncd browser-ai\n\n# Create virtual environment\npython3 -m venv .venv\nsource .venv/bin/activate\n\n# Install dependencies\npip install unsloth trl accelerate torch transformers datasets\n\n# Train on your text (replace with your file)\npython train/smol_lora_train.py --data ./my-book.txt --epochs 3 --steps 60\n\n# The merged model is saved to ./output/personality/\n\n# Serve the model locally\npython train/serve.py --model ./output/personality`
                 )}
                 className="shrink-0 flex h-7 w-7 items-center justify-center text-gray-400 hover:text-black transition-colors"
                 title="Copy commands"
@@ -71,19 +70,23 @@ export default function GPUTrainPage() {
               </div>
 
               <pre className="text-xs leading-relaxed text-gray-500 whitespace-pre-wrap font-mono">
-                <span className="text-gray-300"># Clone this repo</span>{"\n"}
+                <span className="text-gray-300"># 1. Clone the repo</span>{"\n"}
                 <span>git clone {REPO_URL}.git</span>{"\n"}
                 <span>cd browser-ai</span>{"\n\n"}
-                <span className="text-gray-300"># Create a virtual environment</span>{"\n"}
+                <span className="text-gray-300"># 2. Install dependencies</span>{"\n"}
                 <span>python3 -m venv .venv</span>{"\n"}
-                <span>source .venv/bin/activate  </span><span className="text-gray-300"># or .venv\Scripts\activate on Windows</span>{"\n\n"}
-                <span className="text-gray-300"># Install dependencies</span>{"\n"}
-                <span>pip install torch transformers peft accelerate</span>{"\n\n"}
-                <span className="text-gray-300"># Export your training data from the browser training page</span>{"\n"}
-                <span className="text-gray-300"># Then run:</span>{"\n"}
-                <span>python train/lora_train.py --model t5-small --epochs 3 --data ./my-data.txt</span>{"\n\n"}
-                <span className="text-gray-300"># The trained adapter will be saved as output/adapter.safetensors</span>{"\n"}
-                <span className="text-gray-300"># Upload it back on the Import page</span>
+                <span>source .venv/bin/activate  </span><span className="text-gray-300"># or .venv\Scripts\activate on Windows</span>{"\n"}
+                <span>pip install unsloth trl accelerate torch transformers datasets</span>{"\n\n"}
+                <span className="text-gray-300"># 3. Prepare your training text (.txt file)</span>{"\n"}
+                <span className="text-gray-300">#    Paste any book, articles, or writing into a .txt file</span>{"\n\n"}
+                <span className="text-gray-300"># 4. Train the personality model</span>{"\n"}
+                <span>python train/smol_lora_train.py \</span>{"\n"}
+                <span>  --data ./my-book.txt \</span>{"\n"}
+                <span>  --epochs 3 --steps 60</span>{"\n\n"}
+                <span className="text-gray-300"># 5. Serve the model locally</span>{"\n"}
+                <span>python train/serve.py --model ./output/personality</span>{"\n\n"}
+                <span className="text-gray-300"># 6. Open your browser → go to the Chat page</span>{"\n"}
+                <span className="text-gray-300">#    Click "Connect to Server"</span>
               </pre>
             </div>
           </div>
@@ -92,14 +95,15 @@ export default function GPUTrainPage() {
           <div className="bg-white">
             <div className="border-b border-black/[0.04] px-5 py-4 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-medium">Google Colab (Free GPU)</h2>
+                <h2 className="text-sm font-medium">Google Colab (Free T4 GPU)</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  No setup needed. Google gives you a free T4/P100 GPU. Just run the notebook.
+                  No setup needed. Google gives you a free T4/P100 GPU. Upload your .txt file
+                  and run the notebook — ~5-10 minutes training.
                 </p>
               </div>
               <button
                 onClick={() => copyText(
-                  "# Open in Colab\n# https://colab.research.google.com/github/batraaryan03/browser-ai/blob/main/train/lora_train.ipynb\n\nfrom google.colab import drive\ndrive.mount('/content/drive')\n!pip install torch transformers peft accelerate\n!python train/lora_train.py --model t5-small --epochs 3"
+                  "# Open in Colab\n# https://colab.research.google.com/github/batraaryan03/browser-ai/blob/main/train/smol_lora_train.ipynb\n\n!pip install unsloth trl accelerate torch transformers datasets\n!python train/smol_lora_train.py --data ./my-book.txt --epochs 3"
                 )}
                 className="shrink-0 flex h-7 w-7 items-center justify-center text-gray-400 hover:text-black transition-colors"
                 title="Copy commands"
@@ -112,26 +116,31 @@ export default function GPUTrainPage() {
             <div className="p-5">
               <pre className="text-xs leading-relaxed text-gray-500 whitespace-pre-wrap font-mono">
                 <span className="text-gray-300"># Open the training notebook in Colab:</span>{"\n"}
-                <span>https://colab.research.google.com/github/batraaryan03/browser-ai/blob/main/train/lora_train.ipynb</span>{"\n\n"}
-                <span className="text-gray-300"># Then in Colab:</span>{"\n"}
-                <span>from google.colab import drive</span>{"\n"}
-                <span>drive.mount('/content/drive')</span>{"\n"}
-                <span>!pip install torch transformers peft accelerate</span>{"\n"}
-                <span>!python train/lora_train.py --model t5-small --epochs 3</span>
+                <span>https://colab.research.google.com/github/batraaryan03/browser-ai/</span>{"\n"}
+                <span>blob/main/train/smol_lora_train.ipynb</span>{"\n\n"}
+                <span className="text-gray-300"># Follow the notebook:</span>{"\n"}
+                <span>1. Install dependencies</span>{"\n"}
+                <span>2. Upload your .txt file</span>{"\n"}
+                <span>3. Run training (~5-10 min on T4)</span>{"\n"}
+                <span>4. Download the merged model ZIP</span>{"\n"}
+                <span>5. Unzip on your machine</span>{"\n"}
+                <span>6. Run: python train/serve.py --model ./output/personality</span>{"\n"}
+                <span>7. Open browser Chat page → Connect</span>
               </pre>
             </div>
           </div>
 
           {/* How it works */}
           <div className="bg-white px-5 py-4">
-            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">The workflow</p>
+            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">The pipeline</p>
             <ol className="space-y-2">
               {[
-                "Export your training config from the browser Export page",
-                "Clone this repo and run the training script on your GPU machine",
-                "The script produces a LoRA adapter file (.safetensors)",
-                "Upload the adapter back via the Import page to use in your browser",
-                "Now inference runs in-browser — instant, private, free",
+                "Export your training text as a .txt file (50K+ characters recommended)",
+                "Run smol_lora_train.py on your GPU — trains SmolLM2-360M with LoRA",
+                "Training produces a merged model in ./output/personality/ (~700 MB)",
+                "Run serve.py to start a local chat API server on port 8000",
+                "Open the browser Chat page and click 'Connect to Server'",
+                "Chat with your trained personality — all inference runs on your GPU",
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-2 text-xs text-gray-500">
                   <span className="text-black shrink-0 font-medium">{i + 1}.</span>
@@ -139,6 +148,16 @@ export default function GPUTrainPage() {
                 </li>
               ))}
             </ol>
+          </div>
+
+          {/* Sharing */}
+          <div className="bg-white px-5 py-4">
+            <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">Share your personality</p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Share your <strong>metadata.json</strong> and training text so others can
+              replicate your personality. Or share the full merged model directory for
+              others to serve locally. Every personality is unique — trained by you, owned by you.
+            </p>
           </div>
         </div>
 

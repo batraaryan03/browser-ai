@@ -114,6 +114,21 @@ const MODELS: ModelInfo[] = [
     enabled: false,
   },
 
+  // ── Chat ───────────────────────────────────────────────────────────
+  {
+    slug: "chat",
+    name: "Personality Chat",
+    description:
+      "Chat with your fine-tuned personality model. Connect to a locally running server (port 8000) that serves your trained SmolLM2-360M model. All inference runs on your GPU — nothing leaves your device.",
+    category: "text",
+    repo: "",
+    sizeBytes: 0,
+    task: "chat",
+    offlineCapable: false,
+    dtype: "fp32",
+    enabled: true,
+  },
+
   // ── Training ────────────────────────────────────────────────────────
   {
     slug: "train",
