@@ -246,7 +246,6 @@ def train(args):
         "training_samples": len(samples),
         "lora_rank": args.lora_rank,
         "steps": args.steps,
-        "steps": args.steps,
         "training_minutes": round(elapsed / 60, 1),
         "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "style_description": f"Trained on {len(raw_text):,} chars of text. Adopts the writing style, vocabulary, and tone of the training text.",
@@ -273,8 +272,13 @@ def train(args):
                 onnx_path,
             ]
             print(f"   Running: {' '.join(cmd)}")
+            print()
+            # Stream output so Colab users see live progress
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
+                if result.stdout:
+                    for line in result.stdout.split("\n"):
+                        print(f"     {line}")
                 print(f"   ✓ ONNX exported to: {onnx_path}")
                 size_mb = sum(f.stat().st_size for f in Path(onnx_path).rglob("*")) / 1e6
                 print(f"   Size: {size_mb:.0f} MB")
@@ -290,11 +294,21 @@ def train(args):
                 zip_size = os.path.getsize(zip_path) / 1e6
                 print(f"   📦 Zipped: {zip_path} ({zip_size:.0f} MB)")
             else:
-                print(f"   ❌ ONNX export failed:")
-                print(f"   {result.stderr[:500]}")
+                if result.stderr:
+                    for line in result.stderr.split("\n")[:15]:
+                        print(f"     {line}")
                 print()
-                print("   Try running manually:")
+                print(f"   ⚠  ONNX export failed — this is usually a torch version mismatch.")
+                print(f"   The merged PyTorch model is still available at {merged_path}.")
+                print()
+                print(f"   To export manually, upgrade torch and run:")
                 print(f"   optimum-cli export onnx --model {merged_path} --task text-generation-with-past {onnx_path}")
+                print()
+                # Clean up partial ONNX directory
+                if os.path.exists(onnx_path):
+                    import shutil
+                    shutil.rmtree(onnx_path, ignore_errors=True)
+                    print(f"   Cleaned up partial ONNX export at {onnx_path}")
         except ImportError:
             print("   ⚠  optimum not installed. Skipping ONNX export.")
             print("     pip install optimum[onnx]")
