@@ -9,7 +9,7 @@ import { isVisionModelLoaded, segmentImage, releaseVisionModel } from "@/lib/vis
 import { useVisionModel } from "@/hooks/useVisionModel";
 import { getModel } from "@/lib/models";
 
-interface SegmentResult {
+interface SegmentLabel {
   label: string;
   score: number;
 }
@@ -18,11 +18,11 @@ const modelInfo = getModel("segment");
 
 export default function SegmentPage() {
   const [image, setImage] = useState<string | null>(null);
-  const [results, setResults] = useState<SegmentResult[] | null>(null);
+  const [labels, setLabels] = useState<SegmentLabel[] | null>(null);
+  const [overlayUrl, setOverlayUrl] = useState<string | null>(null);
   const { loadState, running, setRunning, makeProgressCallback, resetLoadState } = useVisionModel();
   const inputRef = useRef<HTMLInputElement>(null);
   const mountedRef = useRef(true);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -34,7 +34,8 @@ export default function SegmentPage() {
       toast.error("Please upload an image.");
       return;
     }
-    setResults(null);
+    setLabels(null);
+    setOverlayUrl(null);
     resetLoadState();
     const reader = new FileReader();
     reader.onload = () => {
@@ -46,28 +47,16 @@ export default function SegmentPage() {
   const segment = useCallback(async () => {
     if (!image) return;
     setRunning(true);
-    setResults(null);
+    setLabels(null);
+    setOverlayUrl(null);
 
     try {
       const onProgress = makeProgressCallback();
-      const segments = await segmentImage(image, onProgress);
+      const result = await segmentImage(image, onProgress);
       if (!mountedRef.current) return;
 
-      // Merge and sort segments
-      const merged = new Map<string, number>();
-      for (const s of segments as any[]) {
-        const label = typeof s.label === "string" ? s.label : "Unknown";
-        const score = typeof s.score === "number" ? s.score : 0;
-        if (!merged.has(label) || score > merged.get(label)!) {
-          merged.set(label, score);
-        }
-      }
-
-      const sorted = Array.from(merged.entries())
-        .map(([label, score]) => ({ label, score }))
-        .sort((a, b) => b.score - a.score);
-
-      setResults(sorted);
+      setLabels(result.labels);
+      setOverlayUrl(result.overlayUrl);
       setRunning(false);
     } catch (err: unknown) {
       if (!mountedRef.current) return;
@@ -79,7 +68,8 @@ export default function SegmentPage() {
 
   const reset = useCallback(() => {
     setImage(null);
-    setResults(null);
+    setLabels(null);
+    setOverlayUrl(null);
     resetLoadState();
     releaseVisionModel("segment");
   }, [resetLoadState]);
@@ -151,12 +141,12 @@ export default function SegmentPage() {
 
           {image && (
             <div className="space-y-4">
-              <div className="bg-white p-4">
+              <div className="bg-white p-4 space-y-3">
+                <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Original</p>
                 <img src={image} alt="Uploaded" className="w-full h-auto max-h-64 object-contain" />
-                <canvas ref={canvasRef} className="hidden" />
               </div>
 
-              {!results && !running && (
+              {!labels && !running && (
                 <button onClick={segment} disabled={loadState.status !== "idle" && !isReady} className="w-full bg-black text-white px-4 py-2.5 text-xs font-medium uppercase tracking-wider hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
                   {loadState.status === "idle" ? "Load Model & Segment" :
                    loadState.status === "downloading" ? `Downloading model... ${progress ?? 0}%` :
@@ -172,27 +162,60 @@ export default function SegmentPage() {
                 </div>
               )}
 
-              {results && (
-                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-4 space-y-2">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
-                    Detected Regions ({results.length})
-                  </p>
-                  {results.length === 0 && (
-                    <p className="text-xs text-gray-400 py-4 text-center">No regions identified.</p>
-                  )}
-                  {results.map((r, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-black/[0.03] last:border-0">
-                      <span className="text-sm capitalize">{r.label.replace(/_/g, " ")}</span>
-                      <span className="text-xs font-medium tabular-nums">{(r.score * 100).toFixed(0)}%</span>
+              {labels && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+                  {/* Segmentation overlay */}
+                  {overlayUrl && (
+                    <div className="bg-white p-4 space-y-3">
+                      <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">Segmentation Overlay</p>
+                      <div className="relative">
+                        <img src={image} alt="Original" className="w-full h-auto max-h-64 object-contain" />
+                        <img
+                          src={overlayUrl}
+                          alt=""
+                          className="absolute inset-0 w-full h-full pointer-events-none"
+                          style={{ mixBlendMode: "multiply", imageRendering: "pixelated" }}
+                        />
+                      </div>
                     </div>
-                  ))}
-                  <div className="flex gap-3 pt-2">
-                    <button onClick={segment} className="flex-1 bg-black/[0.03] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 hover:text-black transition-colors">
-                      Re-segment
-                    </button>
-                    <button onClick={reset} className="flex-1 bg-black/[0.03] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 hover:text-black transition-colors">
-                      Try another
-                    </button>
+                  )}
+
+                  {/* Label list */}
+                  <div className="bg-white p-4 space-y-2">
+                    <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+                      Detected Regions ({labels.length})
+                    </p>
+                    {labels.length === 0 && (
+                      <p className="text-xs text-gray-400 py-4 text-center">No regions identified.</p>
+                    )}
+                    {labels.map((r, i) => (
+                      <div key={i} className="flex items-center gap-2.5 py-1.5 border-b border-black/[0.03] last:border-0">
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm shrink-0"
+                          style={{
+                            backgroundColor: [
+                              "rgb(255,50,50)", "rgb(50,255,50)", "rgb(50,50,255)", "rgb(255,255,50)",
+                              "rgb(255,50,255)", "rgb(50,255,255)", "rgb(200,100,0)", "rgb(0,200,100)",
+                              "rgb(100,0,200)", "rgb(200,0,100)", "rgb(100,200,0)", "rgb(0,100,200)",
+                              "rgb(200,100,100)", "rgb(100,200,100)", "rgb(100,100,200)", "rgb(200,150,0)",
+                              "rgb(0,200,150)", "rgb(150,0,200)", "rgb(200,0,150)", "rgb(150,200,0)",
+                              "rgb(0,150,200)", "rgb(200,150,150)", "rgb(150,200,150)", "rgb(150,150,200)",
+                              "rgb(255,100,100)", "rgb(100,255,100)", "rgb(100,100,255)", "rgb(255,200,100)",
+                              "rgb(255,100,200)", "rgb(200,255,100)",
+                            ][i % 30],
+                          }}
+                        />
+                        <span className="text-sm capitalize">{r.label.replace(/_/g, " ")}</span>
+                      </div>
+                    ))}
+                    <div className="flex gap-3 pt-2">
+                      <button onClick={segment} className="flex-1 bg-black/[0.03] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 hover:text-black transition-colors">
+                        Re-segment
+                      </button>
+                      <button onClick={reset} className="flex-1 bg-black/[0.03] px-3 py-2 text-[10px] font-medium uppercase tracking-wider text-gray-500 hover:text-black transition-colors">
+                        Try another
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               )}

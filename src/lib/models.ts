@@ -104,14 +104,14 @@ const MODELS: ModelInfo[] = [
     slug: "ocr",
     name: "Text Recognition (OCR)",
     description:
-      "Extract printed text from images using TrOCR-base (~330 MB). A transformer-based OCR model by Microsoft. Runs entirely in-browser via Transformers.js.",
+      "Extract printed text from images using TrOCR-base (~330 MB). A transformer-based OCR model by Microsoft.",
     category: "vision",
     repo: "Xenova/trocr-base-printed",
     sizeBytes: 330_000_000,
     task: "image-to-text",
     offlineCapable: true,
     dtype: "fp32",
-    enabled: true,
+    enabled: false,
   },
 
   // ── Training ────────────────────────────────────────────────────────

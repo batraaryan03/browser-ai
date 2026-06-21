@@ -189,17 +189,108 @@ export async function detectObjects(
 }
 
 /**
+ * Distinct color palette for segmentation overlay rendering.
+ * Each class gets a semi-transparent color from this palette.
+ */
+const SEGMENT_COLORS: [number, number, number][] = [
+  [255, 50, 50], [50, 255, 50], [50, 50, 255], [255, 255, 50], [255, 50, 255],
+  [50, 255, 255], [200, 100, 0], [0, 200, 100], [100, 0, 200], [200, 0, 100],
+  [100, 200, 0], [0, 100, 200], [200, 100, 100], [100, 200, 100], [100, 100, 200],
+  [200, 150, 0], [0, 200, 150], [150, 0, 200], [200, 0, 150], [150, 200, 0],
+  [0, 150, 200], [200, 150, 150], [150, 200, 150], [150, 150, 200], [255, 100, 100],
+  [100, 255, 100], [100, 100, 255], [255, 200, 100], [255, 100, 200], [200, 255, 100],
+];
+
+/**
+ * Render a colored segmentation overlay from per-class masks.
+ * Returns a data URL of the overlay (semi-transparent colored regions).
+ */
+function renderSegmentationOverlay(segments: any[]): string | null {
+  if (!segments || segments.length === 0) return null;
+
+  // Determine canvas size from the first mask
+  const first = segments[0];
+  let width = 512;
+  let height = 512;
+  if (first.mask) {
+    width = first.mask.width || 512;
+    height = first.mask.height || 512;
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d")!;
+
+  // Clear with transparent background
+  ctx.clearRect(0, 0, width, height);
+
+  // Composite each class mask with its color
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    const mask = seg.mask;
+    if (!mask || !mask.data) continue;
+
+    const [r, g, b] = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+    const maskData = mask.data as Uint8Array;
+
+    const imageData = ctx.createImageData(width, height);
+    const pixels = imageData.data;
+
+    for (let j = 0; j < maskData.length && j < width * height; j++) {
+      if (maskData[j] > 64) {
+        pixels[j * 4] = r;
+        pixels[j * 4 + 1] = g;
+        pixels[j * 4 + 2] = b;
+        pixels[j * 4 + 3] = 160; // semi-transparent
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  return canvas.toDataURL();
+}
+
+/**
  * Segment an image into semantic regions.
- * Returns { label, mask, score }[].
+ *
+ * Renders a colored overlay from raw masks (to prevent OOM from holding
+ * all masks in memory) and returns only lightweight label data + overlay image.
+ *
+ * Returns { labels: { label, score }[], overlayUrl: string | null }.
  */
 export async function segmentImage(
   image: ImageInput,
   onProgress: (p: VisionProgress) => void,
-): Promise<{ label: string; mask: any; score: number }[]> {
+): Promise<{
+  labels: { label: string; score: number }[];
+  overlayUrl: string | null;
+}> {
   const cfg = VISION_MODELS.segment;
   const pipe: any = await loadPipeline<any>(cfg.task, cfg.modelId, onProgress, cfg.dtype);
-  const result = await pipe(image);
-  return result as any;
+  const segments = await pipe(image);
+  const arr = Array.isArray(segments) ? segments : [segments];
+
+  // Render overlay first (while masks are still in memory)
+  const overlayUrl = renderSegmentationOverlay(arr);
+
+  // Extract only labels + scores, discard mask data
+  const labelMap = new Map<string, number>();
+  for (const s of arr) {
+    const label = typeof s.label === "string" ? s.label : "Unknown";
+    const score = typeof s.score === "number" ? s.score : 0;
+    if (!labelMap.has(label) || score > labelMap.get(label)!) {
+      labelMap.set(label, score);
+    }
+  }
+
+  const labels = Array.from(labelMap.entries())
+    .map(([label, score]) => ({ label, score }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 30); // Top 30 to avoid overwhelming UI
+
+  return { labels, overlayUrl };
 }
 
 /**
