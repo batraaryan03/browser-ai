@@ -28,9 +28,9 @@ export function Footer() {
           <div className="space-y-2.5">
             <p className="text-[10px] font-medium uppercase tracking-wider text-gray-500">About</p>
             <div className="flex flex-col gap-1.5">
+              <Link href="/docs" className="text-[11px] text-gray-400 hover:text-black transition-colors">Docs</Link>
               <a href="https://github.com/batraaryan03/browser-ai" target="_blank" rel="noopener noreferrer" className="text-[11px] text-gray-400 hover:text-black transition-colors">Source Code</a>
               <Link href="/" className="text-[11px] text-gray-400 hover:text-black transition-colors">Home</Link>
-              <p className="text-[11px] text-gray-400">All local · No servers</p>
             </div>
           </div>
         </div>

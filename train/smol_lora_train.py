@@ -185,7 +185,6 @@ def train(args):
     
     # ─── Training ────────────────────────────────────────────────────
     print("🏋️  Starting training...")
-    print(f"   Epochs: {args.epochs}")
     print(f"   Steps: {args.steps}")
     print(f"   Batch size: {args.batch_size}")
     print(f"   Learning rate: {args.learning_rate}")
@@ -246,7 +245,7 @@ def train(args):
         "word_count": len(raw_text.split()),
         "training_samples": len(samples),
         "lora_rank": args.lora_rank,
-        "epochs": args.epochs,
+        "steps": args.steps,
         "steps": args.steps,
         "training_minutes": round(elapsed / 60, 1),
         "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

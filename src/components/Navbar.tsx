@@ -16,6 +16,7 @@ const MODEL_NAMES: Record<string, string> = {
 };
 
 function getPageName(pathname: string): string | null {
+  if (pathname === "/docs") return "Docs";
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === "models" && parts[1]) {
     if (parts[2] === "browser") return "Browser Training";
@@ -96,8 +97,15 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Right: model selector */}
-        <div ref={ref} className="relative">
+        {/* Right: navigation links */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/docs")}
+            className="text-[11px] text-gray-400 hover:text-black transition-colors uppercase tracking-wider"
+          >
+            Docs
+          </button>
+          <div ref={ref} className="relative">
           <button
             onClick={() => setOpen((v) => !v)}
             className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-black transition-colors uppercase tracking-wider"
@@ -161,6 +169,7 @@ export function Navbar() {
           )}
         </div>
       </div>
+    </div>
     </nav>
   );
 }
