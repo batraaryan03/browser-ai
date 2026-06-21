@@ -152,7 +152,7 @@ def train(args):
     # Apply chat template
     tokenizer = get_chat_template(
         tokenizer,
-        chat_template="smolLM2",  # SmolLM2's built-in chat template
+        chat_template="huggingface",  # SmolLM2's built-in chat template
     )
     
     # ─── Add LoRA adapters ────────────────────────────────────────────
