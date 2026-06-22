@@ -33,27 +33,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   training: "Training",
 };
 
-function ModelDropdownItem({ model, onSelect }: { model: ModelInfo; onSelect: (m: ModelInfo) => void }) {
-  return (
-    <button
-      onClick={() => onSelect(model)}
-      className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-md text-sm text-[var(--fg-muted)] hover:bg-[var(--bg-alt)] hover:text-[var(--fg)] transition-all duration-150 ease-out"
-    >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-alt)] text-[var(--fg-subtle)]">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square">
-          {model.category === "text" && <path d="M3 1h6a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3l2-2z M3 1v2H1" />}
-          {model.category === "vision" && <rect x="1" y="2" width="10" height="8" rx="1" />}
-          {model.category === "training" && <circle cx="6" cy="6" r="4.5" />}
-        </svg>
-      </span>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{model.name}</p>
-        <p className="text-[10px] text-[var(--fg-subtle)] mt-0.5">{model.description?.slice(0, 50)}</p>
-      </div>
-    </button>
-  );
-}
-
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -74,84 +53,75 @@ export function Navbar() {
   const models = getEnabledModels().filter((m) => m.slug !== "ocr");
 
   return (
-    <nav className="sticky top-0 z-50 bg-[var(--bg)]/80 backdrop-blur-md border-b border-[var(--border-light)]">
-      <div className="content-container h-14 flex items-center justify-between">
-        {/* Left: brand */}
-        <div className="flex items-center gap-3">
-          {!isHome && (
-            <button
-              onClick={() => router.push("/")}
-              className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] transition-all duration-150 ease-out"
-              aria-label="Back to home"
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square">
-                <path d="M9 2l-5 5 5 5" />
-              </svg>
-            </button>
+    <nav className="sticky top-0 z-50 bg-[var(--bg)]/90 backdrop-blur-sm border-b border-[var(--border-light)]">
+      <div className="px-6 sm:px-10 h-14 flex items-center justify-between">
+        {/* Brand */}
+        <button
+          onClick={() => router.push("/")}
+          className="text-base font-bold tracking-tight text-[var(--fg)] hover:opacity-70 transition-opacity duration-150"
+        >
+          <span className="text-[var(--green)]">browser</span>{" "}
+          <span>ai</span>
+          {pageName && !isHome && (
+            <span className="text-[var(--fg-subtle)] font-normal ml-2">
+              / <span className="text-[var(--fg-muted)]">{pageName}</span>
+            </span>
           )}
-          {pageName ? (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => router.push("/")}
-                className="text-sm font-semibold tracking-tight text-[var(--fg)] hover:opacity-70 transition-opacity duration-150"
-              >
-                browser ai
-              </button>
-              <span className="text-[var(--border)] text-xs">/</span>
-              <span className="text-sm font-medium text-[var(--fg-muted)]">{pageName}</span>
-            </div>
-          ) : (
-            <button
-              onClick={() => router.push("/")}
-              className="text-sm font-semibold tracking-tight text-[var(--fg)] hover:opacity-70 transition-opacity duration-150"
-            >
-              browser ai
-            </button>
-          )}
-        </div>
+        </button>
 
-        {/* Right: navigation links */}
+        {/* Right */}
         <div className="flex items-center gap-1">
           <button
             onClick={() => router.push("/docs")}
-            className="px-3 py-1.5 text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-md transition-all duration-150 ease-out"
+            className="px-4 py-2 text-sm font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-lg transition-all duration-150 ease-out"
           >
             Docs
           </button>
           <div ref={ref} className="relative">
             <button
               onClick={() => setOpen((v) => !v)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-md transition-all duration-150 ease-out"
+              className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-lg transition-all duration-150 ease-out"
             >
               <span>Models</span>
               <svg
-                width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square"
+                width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square"
                 className={`transition-transform duration-200 ease-out ${open ? "rotate-180" : ""}`}
               >
                 <path d="M2.5 3.5l2.5 3 2.5-3" />
               </svg>
             </button>
-
             {open && (
-              <div className="absolute top-full right-0 z-50 mt-1.5 w-64 bg-white rounded-xl border border-[var(--border)] shadow-lg shadow-black/[0.04] overflow-hidden">
-                <div className="p-1.5 max-h-80 overflow-y-auto space-y-0.5">
+              <div className="absolute top-full right-0 z-50 mt-1.5 w-72 bg-white rounded-xl border border-[var(--border)] shadow-lg overflow-hidden">
+                <div className="p-2 space-y-1">
                   {["text", "vision", "training"].map((cat) => {
                     const catModels = models.filter((m) => m.category === cat);
                     if (catModels.length === 0) return null;
                     return (
                       <div key={cat}>
-                        <p className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--fg-subtle)]">
+                        <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--fg-subtle)]">
                           {CATEGORY_LABELS[cat] ?? cat}
                         </p>
                         {catModels.map((m) => (
-                          <ModelDropdownItem
+                          <button
                             key={m.slug}
-                            model={m}
-                            onSelect={(model) => {
+                            onClick={() => {
                               setOpen(false);
-                              router.push(`/models/${model.slug}`);
+                              router.push(`/models/${m.slug}`);
                             }}
-                          />
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm text-[var(--fg-muted)] hover:bg-[var(--bg-alt)] hover:text-[var(--fg)] transition-all duration-150 ease-out"
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--bg-alt)] text-[var(--fg-subtle)]">
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square">
+                                {m.category === "text" && <path d="M3.5 1h7a1 1 0 011 1v9a1 1 0 01-1 1h-8a1 1 0 01-1-1V3.5l2-2.5zM3.5 1v2.5H1" />}
+                                {m.category === "vision" && <rect x="1.5" y="2.5" width="11" height="9" rx="1.5" />}
+                                {m.category === "training" && <circle cx="7" cy="7" r="5" />}
+                              </svg>
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{m.name}</p>
+                              <p className="text-xs text-[var(--fg-subtle)] truncate">{m.description?.slice(0, 60)}</p>
+                            </div>
+                          </button>
                         ))}
                       </div>
                     );

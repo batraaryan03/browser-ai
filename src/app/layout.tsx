@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=JetBrains+Mono:wght@400;500&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -30,10 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               style: {
                 background: "#ffffff",
                 border: "1px solid var(--border)",
-                borderRadius: "8px",
+                borderRadius: "12px",
                 fontSize: "13px",
-                fontFamily: "Montserrat, sans-serif",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)",
+                fontFamily: "Bricolage Grotesque, sans-serif",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.04)",
               },
             }}
           />
