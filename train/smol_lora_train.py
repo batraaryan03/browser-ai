@@ -332,6 +332,49 @@ def train(args):
     return 0
 
 
+def _create_venv(venv_path: str) -> tuple[str, str] | None:
+    """
+    Create a Python virtual environment, returning (pip_path, python_path).
+
+    Tries multiple strategies because Colab does not ship python3-venv:
+      1. python3 -m venv (standard, works on most local machines)
+      2. virtualenv (pip-installable, works on Colab)
+
+    Returns None if all strategies fail.
+    """
+    def _bin_paths(base: str) -> tuple[str, str]:
+        if sys.platform == "win32":
+            return (os.path.join(base, "Scripts", "pip"),
+                    os.path.join(base, "Scripts", "python"))
+        return (os.path.join(base, "bin", "pip"),
+                os.path.join(base, "bin", "python"))
+
+    # Strategy 1: python3 -m venv
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "venv", venv_path],
+            check=True, capture_output=True, timeout=30,
+        )
+        return _bin_paths(venv_path)
+    except Exception:
+        pass
+
+    # Strategy 2: pip install virtualenv, then use it
+    try:
+        print(f"   python3 -m venv not available, trying virtualenv...")
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--quiet", "virtualenv"],
+            check=True, capture_output=True, timeout=60,
+        )
+        subprocess.run(
+            [sys.executable, "-m", "virtualenv", venv_path],
+            check=True, capture_output=True, timeout=30,
+        )
+        return _bin_paths(venv_path)
+    except Exception:
+        return None
+
+
 def export_onnx_via_venv(merged_path: str, onnx_path: str) -> bool:
     """
     Export to ONNX using an isolated temporary venv.
@@ -350,21 +393,14 @@ def export_onnx_via_venv(merged_path: str, onnx_path: str) -> bool:
         shutil.rmtree(venv_path, ignore_errors=True)
 
     try:
-        # Step 1: Create venv
-        subprocess.run(
-            [sys.executable, "-m", "venv", venv_path],
-            check=True, capture_output=True, timeout=30,
-        )
+        # Step 1: Create venv (try multiple strategies)
+        paths = _create_venv(venv_path)
+        if paths is None:
+            print("   ⚠  Could not create virtual environment (try 'pip install virtualenv' first)")
+            return False
+        pip_path, python_path = paths
 
-        # Step 2: Determine venv bin path
-        if sys.platform == "win32":
-            pip_path = os.path.join(venv_path, "Scripts", "pip")
-            python_path = os.path.join(venv_path, "Scripts", "python")
-        else:
-            pip_path = os.path.join(venv_path, "bin", "pip")
-            python_path = os.path.join(venv_path, "bin", "python")
-
-        # Upgrade pip inside venv
+        # Step 2: Upgrade pip inside venv
         subprocess.run(
             [pip_path, "install", "--quiet", "--upgrade", "pip"],
             check=True, capture_output=True, timeout=60,
