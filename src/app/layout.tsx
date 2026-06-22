@@ -4,8 +4,9 @@ import { ThemeProvider } from "./theme";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PDF to Summary",
-  description: "AI-powered PDF summarization — entirely in your browser. No uploads, no servers, no API keys.",
+  title: "browser ai — AI that runs on your machine",
+  description:
+    "Run AI models entirely in your browser. No servers, no API keys, no data leaving your device. Fine-tune personalities, classify images, detect objects, and more — all locally.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
@@ -28,9 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             toastOptions={{
               style: {
                 background: "#ffffff",
-                border: "0",
-                borderRadius: "0",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
                 fontSize: "13px",
+                fontFamily: "Montserrat, sans-serif",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)",
               },
             }}
           />

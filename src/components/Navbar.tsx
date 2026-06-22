@@ -33,6 +33,27 @@ const CATEGORY_LABELS: Record<string, string> = {
   training: "Training",
 };
 
+function ModelDropdownItem({ model, onSelect }: { model: ModelInfo; onSelect: (m: ModelInfo) => void }) {
+  return (
+    <button
+      onClick={() => onSelect(model)}
+      className="w-full flex items-center gap-3 px-3 py-2 text-left rounded-md text-sm text-[var(--fg-muted)] hover:bg-[var(--bg-alt)] hover:text-[var(--fg)] transition-all duration-150 ease-out"
+    >
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--bg-alt)] text-[var(--fg-subtle)]">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square">
+          {model.category === "text" && <path d="M3 1h6a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3l2-2z M3 1v2H1" />}
+          {model.category === "vision" && <rect x="1" y="2" width="10" height="8" rx="1" />}
+          {model.category === "training" && <circle cx="6" cy="6" r="4.5" />}
+        </svg>
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{model.name}</p>
+        <p className="text-[10px] text-[var(--fg-subtle)] mt-0.5">{model.description?.slice(0, 50)}</p>
+      </div>
+    </button>
+  );
+}
+
 export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -51,28 +72,20 @@ export function Navbar() {
   }, [open]);
 
   const models = getEnabledModels().filter((m) => m.slug !== "ocr");
-  const textModels = models.filter((m) => m.category === "text");
-  const visionModels = models.filter((m) => m.category === "vision");
-  const trainingModels = models.filter((m) => m.category === "training");
-
-  function handleSelect(m: ModelInfo) {
-    setOpen(false);
-    router.push(`/models/${m.slug}`);
-  }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white">
-      <div className="mx-auto max-w-5xl px-5 h-12 flex items-center justify-between">
-        {/* Left: brand + breadcrumb */}
+    <nav className="sticky top-0 z-50 bg-[var(--bg)]/80 backdrop-blur-md border-b border-[var(--border-light)]">
+      <div className="content-container h-14 flex items-center justify-between">
+        {/* Left: brand */}
         <div className="flex items-center gap-3">
           {!isHome && (
             <button
               onClick={() => router.push("/")}
-              className="flex h-7 w-7 items-center justify-center text-gray-400 hover:text-black transition-colors"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] transition-all duration-150 ease-out"
               aria-label="Back to home"
             >
-              <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square">
-                <path d="M8.5 2l-4 4.5 4 4.5" />
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square">
+                <path d="M9 2l-5 5 5 5" />
               </svg>
             </button>
           )}
@@ -80,17 +93,17 @@ export function Navbar() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => router.push("/")}
-                className="text-sm font-medium tracking-tight hover:opacity-60 transition-opacity"
+                className="text-sm font-semibold tracking-tight text-[var(--fg)] hover:opacity-70 transition-opacity duration-150"
               >
                 browser ai
               </button>
-              <span className="text-gray-300 text-[10px]">/</span>
-              <span className="text-sm font-medium text-gray-500">{pageName}</span>
+              <span className="text-[var(--border)] text-xs">/</span>
+              <span className="text-sm font-medium text-[var(--fg-muted)]">{pageName}</span>
             </div>
           ) : (
             <button
               onClick={() => router.push("/")}
-              className="text-sm font-medium tracking-tight hover:opacity-60 transition-opacity"
+              className="text-sm font-semibold tracking-tight text-[var(--fg)] hover:opacity-70 transition-opacity duration-150"
             >
               browser ai
             </button>
@@ -98,78 +111,57 @@ export function Navbar() {
         </div>
 
         {/* Right: navigation links */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => router.push("/docs")}
-            className="text-[11px] text-gray-400 hover:text-black transition-colors uppercase tracking-wider"
+            className="px-3 py-1.5 text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-md transition-all duration-150 ease-out"
           >
             Docs
           </button>
           <div ref={ref} className="relative">
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-black transition-colors uppercase tracking-wider"
-          >
-            <span>Models</span>
-            <svg
-              width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="square"
-              className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--bg-alt)] rounded-md transition-all duration-150 ease-out"
             >
-              <path d="M2.5 3.5l2.5 3 2.5-3" />
-            </svg>
-          </button>
+              <span>Models</span>
+              <svg
+                width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="square"
+                className={`transition-transform duration-200 ease-out ${open ? "rotate-180" : ""}`}
+              >
+                <path d="M2.5 3.5l2.5 3 2.5-3" />
+              </svg>
+            </button>
 
-          {open && (
-            <div className="absolute top-full right-0 z-50 mt-1 bg-white border border-black/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.06)] w-56 max-h-80 overflow-y-auto">
-              <div className="p-1.5 space-y-0.5">
-                {textModels.length > 0 && (
-                  <div>
-                    <p className="px-3 py-1.5 text-[9px] font-medium uppercase tracking-[0.15em] text-gray-400">Text</p>
-                    {textModels.map((m) => (
-                      <button
-                        key={m.slug}
-                        onClick={() => handleSelect(m)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-black/[0.02] transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">{m.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {visionModels.length > 0 && (
-                  <div>
-                    <p className="px-3 py-1.5 text-[9px] font-medium uppercase tracking-[0.15em] text-gray-400">Vision</p>
-                    {visionModels.map((m) => (
-                      <button
-                        key={m.slug}
-                        onClick={() => handleSelect(m)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-black/[0.02] transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">{m.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {trainingModels.length > 0 && (
-                  <div>
-                    <p className="px-3 py-1.5 text-[9px] font-medium uppercase tracking-[0.15em] text-gray-400">Training</p>
-                    {trainingModels.map((m) => (
-                      <button
-                        key={m.slug}
-                        onClick={() => handleSelect(m)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-black/[0.02] transition-colors"
-                      >
-                        <span className="text-sm text-gray-700">{m.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {open && (
+              <div className="absolute top-full right-0 z-50 mt-1.5 w-64 bg-white rounded-xl border border-[var(--border)] shadow-lg shadow-black/[0.04] overflow-hidden">
+                <div className="p-1.5 max-h-80 overflow-y-auto space-y-0.5">
+                  {["text", "vision", "training"].map((cat) => {
+                    const catModels = models.filter((m) => m.category === cat);
+                    if (catModels.length === 0) return null;
+                    return (
+                      <div key={cat}>
+                        <p className="px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--fg-subtle)]">
+                          {CATEGORY_LABELS[cat] ?? cat}
+                        </p>
+                        {catModels.map((m) => (
+                          <ModelDropdownItem
+                            key={m.slug}
+                            model={m}
+                            onSelect={(model) => {
+                              setOpen(false);
+                              router.push(`/models/${model.slug}`);
+                            }}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </nav>
   );
 }
