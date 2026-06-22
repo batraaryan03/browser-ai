@@ -212,7 +212,7 @@ def train(args):
             lr_scheduler_type="linear",
             seed=3407,
             output_dir=os.path.join(args.output, "checkpoints"),
-            save_strategy="no",  # 👈 Add this line here
+            save_strategy="no",
             report_to="none",
         ),
     )
@@ -264,30 +264,7 @@ def train(args):
     if args.export_onnx:
         print("🔄 Exporting to ONNX for browser inference...")
         onnx_path = os.path.join(args.output, "personality-onnx")
-        export_ok = False
-
-        # Strategy 1: Try optimum-cli directly (works if venv matches)
-        try:
-            cmd = [
-                "optimum-cli", "export", "onnx",
-                "--model", merged_path,
-                "--task", "text-generation-with-past",
-                onnx_path,
-            ]
-            print(f"   Trying: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            if result.returncode == 0:
-                export_ok = True
-            else:
-                # Clean up partial export
-                if os.path.exists(onnx_path):
-                    shutil.rmtree(onnx_path, ignore_errors=True)
-        except (FileNotFoundError, subprocess.TimeoutExpired):
-            pass
-
-        # Strategy 2: Spawn a temporary venv with compatible torch
-        if not export_ok:
-            export_ok = export_onnx_via_venv(merged_path, onnx_path)
+        export_ok = export_onnx_direct(merged_path, onnx_path)
 
         # ─── Report result ────────────────────────────────────────
         if export_ok:
@@ -305,10 +282,10 @@ def train(args):
             zip_size = os.path.getsize(zip_path) / 1e6
             print(f"   📦 Zipped: {zip_path} ({zip_size:.0f} MB)")
         else:
-            print(f"   ⚠  All ONNX export strategies failed.")
+            print(f"   ⚠  ONNX export failed.")
             print(f"   The merged PyTorch model is still available at {merged_path}.")
             print()
-            print(f"   To export manually, run on a machine with torch >= 2.11:")
+            print(f"   To export manually, run on a machine with optimum[onnx] installed:")
             print(f"   optimum-cli export onnx --model {merged_path} --task text-generation-with-past {onnx_path}")
 
     print()
@@ -332,125 +309,49 @@ def train(args):
     return 0
 
 
-def _create_venv(venv_path: str) -> tuple[str, str] | None:
+def export_onnx_direct(merged_path: str, onnx_path: str) -> bool:
     """
-    Create a Python virtual environment, returning (pip_path, python_path).
+    Export to ONNX for browser inference using optimum-cli.
 
-    Tries multiple strategies because Colab does not ship python3-venv:
-      1. python3 -m venv (standard, works on most local machines)
-      2. virtualenv (pip-installable, works on Colab)
+    optimum[onnx] is installed directly in the Colab environment via the
+    notebook's pip install cell (no venv needed). The export runs with
+    KV-cache support for fast browser inference.
 
-    Returns None if all strategies fail.
+    A 5-minute timeout prevents hanging if OOM or other issues occur.
     """
-    def _bin_paths(base: str) -> tuple[str, str]:
-        if sys.platform == "win32":
-            return (os.path.join(base, "Scripts", "pip"),
-                    os.path.join(base, "Scripts", "python"))
-        return (os.path.join(base, "bin", "pip"),
-                os.path.join(base, "bin", "python"))
+    cmd = [
+        "optimum-cli", "export", "onnx",
+        "--model", merged_path,
+        "--task", "text-generation-with-past",
+        onnx_path,
+    ]
+    print(f"   Running: {' '.join(cmd)}")
 
-    # Strategy 1: python3 -m venv
-    try:
-        subprocess.run(
-            [sys.executable, "-m", "venv", venv_path],
-            check=True, capture_output=True, timeout=30,
-        )
-        return _bin_paths(venv_path)
-    except Exception:
-        pass
-
-    # Strategy 2: pip install virtualenv, then use it
-    try:
-        print(f"   python3 -m venv not available, trying virtualenv...")
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "--quiet", "virtualenv"],
-            check=True, capture_output=True, timeout=60,
-        )
-        subprocess.run(
-            [sys.executable, "-m", "virtualenv", venv_path],
-            check=True, capture_output=True, timeout=30,
-        )
-        return _bin_paths(venv_path)
-    except Exception:
-        return None
-
-
-def export_onnx_via_venv(merged_path: str, onnx_path: str) -> bool:
-    """
-    Export to ONNX using an isolated temporary venv.
-
-    This avoids the dependency conflict between unsloth (needs torch < 2.11)
-    and optimum (needs torch >= 2.11 on newer versions). By creating a
-    throwaway venv with its own torch 2.11, both sides are happy.
-
-    Returns True on success, False on failure.
-    """
-    venv_path = "/tmp/onnx-export-venv"
-    print(f"   🔄 Creating isolated venv at {venv_path}...")
-
-    # Clean up any stale venv from a previous run
-    if os.path.exists(venv_path):
-        shutil.rmtree(venv_path, ignore_errors=True)
+    # Remove any stale output directory
+    if os.path.exists(onnx_path):
+        shutil.rmtree(onnx_path, ignore_errors=True)
 
     try:
-        # Step 1: Create venv (try multiple strategies)
-        paths = _create_venv(venv_path)
-        if paths is None:
-            print("   ⚠  Could not create virtual environment (try 'pip install virtualenv' first)")
-            return False
-        pip_path, python_path = paths
-
-        # Step 2: Upgrade pip inside venv
-        subprocess.run(
-            [pip_path, "install", "--quiet", "--upgrade", "pip"],
-            check=True, capture_output=True, timeout=60,
-        )
-
-        # Step 3: Install torch 2.11 + optimum[onnx]
-        print(f"   📦 Installing torch 2.11 + optimum[onnx] in venv...")
-        subprocess.run(
-            [pip_path, "install", "--quiet",
-             "torch", "torchvision", "torchaudio",
-             "--index-url", "https://download.pytorch.org/whl/cu128"],
-            check=True, capture_output=True, timeout=300,
-        )
-        subprocess.run(
-            [pip_path, "install", "--quiet", "optimum[onnx]"],
-            check=True, capture_output=True, timeout=120,
-        )
-
-        # Step 4: Run optimum-cli export (stream output so user sees progress)
-        print(f"   🏗️  Running optimum-cli export...")
-        cmd = [
-            python_path, "-m", "optimum.cli", "export", "onnx",
-            "--model", merged_path,
-            "--task", "text-generation-with-past",
-            onnx_path,
-        ]
-
-        process = subprocess.Popen(
+        result = subprocess.run(
             cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
+            capture_output=True, text=True, timeout=300,
         )
 
-        # Stream output line by line
-        for line in process.stdout or []:
-            line = line.rstrip()
-            if line:
+        # Print captured output so user sees progress
+        if result.stdout:
+            for line in result.stdout.splitlines():
+                print(f"     {line}")
+        if result.stderr:
+            for line in result.stderr.splitlines():
                 print(f"     {line}")
 
-        process.wait()
-
-        if process.returncode != 0:
-            print(f"   ❌ optimum-cli failed with exit code {process.returncode}")
+        if result.returncode != 0:
+            print(f"   ❌ optimum-cli failed with exit code {result.returncode}")
             if os.path.exists(onnx_path):
                 shutil.rmtree(onnx_path, ignore_errors=True)
             return False
 
-        # Verify the output directory has files
+        # Verify the output directory has .onnx files
         if not os.path.exists(onnx_path) or not any(
             f.endswith(".onnx") for f in os.listdir(onnx_path)
         ):
@@ -459,17 +360,17 @@ def export_onnx_via_venv(merged_path: str, onnx_path: str) -> bool:
 
         return True
 
+    except FileNotFoundError:
+        print(f"   ❌ optimum-cli not found. Is optimum[onnx] installed?")
+        print(f"      Try: pip install optimum[onnx]")
+        return False
     except subprocess.TimeoutExpired:
-        print(f"   ⏱️  Venv export timed out")
+        print(f"   ⏱️  Export timed out after 5 minutes")
+        print(f"      The model is too large or the T4 GPU ran out of memory.")
+        print(f"      Try reducing --max-seq-length or use a GPU with more VRAM.")
+        if os.path.exists(onnx_path):
+            shutil.rmtree(onnx_path, ignore_errors=True)
         return False
-    except Exception as e:
-        print(f"   ⚠  Venv export failed: {e}")
-        return False
-    finally:
-        # Always clean up the temporary venv
-        if os.path.exists(venv_path):
-            shutil.rmtree(venv_path, ignore_errors=True)
-            print(f"   🧹 Cleaned up temporary venv")
 
 
 if __name__ == "__main__":
