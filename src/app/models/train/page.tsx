@@ -6,6 +6,42 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import type { ReactNode } from "react";
 
+// ── Image/Video assets ───────────────────────────────────────────────
+
+const TRAINING_FLOW_IMG = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=80&fm=webp&fit=crop";
+const COLAB_IMG = "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=1200&q=80&fm=webp&fit=crop";
+const LOCAL_GPU_IMG = "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&q=80&fm=webp&fit=crop";
+const BROWSER_INFERENCE_IMG = "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&q=80&fm=webp&fit=crop";
+
+const DEMO_VIDEO_URL = "https://www.pexels.com/video/organized-workspace-with-a-modern-touch-34616260/";
+
+const PIPELINE_STEPS = [
+  {
+    step: "01",
+    title: "Prepare data",
+    desc: "Export your text as a .txt file. 50K+ characters recommended for good results. Books, articles, or personal writing all work.",
+    image: LOCAL_GPU_IMG,
+  },
+  {
+    step: "02",
+    title: "Train with LoRA",
+    desc: "SmolLM2-360M is loaded in 4-bit via Unsloth. LoRA adapters (rank 16) are trained on your text. Takes 5-15 min on a T4 GPU.",
+    image: TRAINING_FLOW_IMG,
+  },
+  {
+    step: "03",
+    title: "Export to ONNX",
+    desc: "The adapted model is merged and exported to ONNX with full KV-cache support. Zipped for browser upload.",
+    image: COLAB_IMG,
+  },
+  {
+    step: "04",
+    title: "Chat in browser",
+    desc: "Upload the ZIP to the Chat page. All inference runs locally via WebGPU/WASM — no server needed.",
+    image: BROWSER_INFERENCE_IMG,
+  },
+];
+
 interface Option {
   slug: string;
   title: string;
@@ -94,13 +130,50 @@ export default function TrainPage() {
     <div className="relative min-h-dvh flex flex-col bg-[var(--bg)]">
       <Navbar />
       <main className="flex-1 flex flex-col items-center px-5 pt-12 pb-20">
-        <div className="text-center space-y-3 max-w-lg mb-12">
+        <div className="text-center space-y-3 max-w-lg mb-8">
           <h1 className="text-2xl font-medium tracking-tight">Model Training</h1>
           <p className="text-sm text-gray-400">
             Train small models in your browser, or use your own GPU for advanced fine-tuning.
             You own everything — the data, the weights, the model.
           </p>
         </div>
+
+        {/* ── Pipeline visualization ──────────────────────────────── */}
+
+        <div className="w-full max-w-2xl mx-auto mb-10">
+          <div className="flex items-center gap-2 mb-5">
+            <span className="inline-block h-2 w-2 rounded-full bg-[var(--green)]" />
+            <span className="text-xs font-semibold text-[var(--fg)] uppercase tracking-wider">The training pipeline</span>
+          </div>
+          <div className="grid gap-4">
+            {PIPELINE_STEPS.map((item, i) => (
+              <motion.div
+                key={item.step}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                className="group relative overflow-hidden rounded-2xl bg-white border border-[var(--border-light)]"
+              >
+                <div className="aspect-[16/6] overflow-hidden">
+                  <div
+                    className="h-full w-full bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-105"
+                    style={{ backgroundImage: `url(${item.image})` }}
+                  />
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-bold text-[var(--green)] tracking-wider">{item.step}</span>
+                    <span className="text-xs text-[var(--border)]">·</span>
+                    <span className="text-xs font-semibold text-[var(--fg)]">{item.title}</span>
+                  </div>
+                  <p className="text-sm text-[var(--fg-muted)] leading-relaxed">{item.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* ─── Training options ────────────────────────────────────── */}
 
         <div className="w-full max-w-2xl mx-auto space-y-8">
           <div>
@@ -118,7 +191,30 @@ export default function TrainPage() {
           </div>
         </div>
 
-        <div className="w-full max-w-2xl mx-auto mt-12 bg-white px-5 py-4">
+        {/* ── Demo video ───────────────────────────────────────────── */}
+
+        <div className="w-full max-w-2xl mx-auto mt-10 space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-[var(--green)]" />
+            <span className="text-xs font-semibold text-[var(--fg)] uppercase tracking-wider">Training in action</span>
+          </div>
+          <div className="relative overflow-hidden rounded-2xl aspect-video bg-[var(--bg-alt)]">
+            <iframe
+              src="https://www.pexels.com/video/organized-workspace-with-a-modern-touch-34616260/embed"
+              className="absolute inset-0 w-full h-full"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              title="Training workspace demo"
+            />
+          </div>
+          <p className="text-xs text-[var(--fg-subtle)] text-center">
+            Set up your workspace, prepare your data, and train your custom AI personality
+          </p>
+        </div>
+
+        {/* ── Zero-cost philosophy ─────────────────────────────────── */}
+
+        <div className="w-full max-w-2xl mx-auto mt-10 bg-white px-5 py-4">
           <p className="text-[11px] font-medium uppercase tracking-wider text-gray-400 mb-2">Zero-cost philosophy</p>
           <p className="text-xs text-gray-500 leading-relaxed">
             Training runs on your hardware. Browser training uses your CPU. Advanced fine-tuning

@@ -6,6 +6,32 @@ import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { getEnabledModels, formatBytes, type ModelInfo } from "@/lib/models";
 
+const HERO_IMAGE = "https://images.unsplash.com/photo-1679900898687-3200929283f5?w=1920&q=80&fm=webp&fit=crop";
+const CODE_IMAGE = "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1920&q=80&fm=webp&fit=crop";
+const NEURAL_IMAGE = "https://images.unsplash.com/photo-1665249673961-0b84f33b1e36?w=1920&q=80&fm=webp&fit=crop";
+const WORKSPACE_IMAGE = "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=1920&q=80&fm=webp&fit=crop";
+
+const HOW_IT_WORKS = [
+  {
+    step: "01",
+    title: "Pick a model",
+    desc: "Choose from text, vision, or training models. They download once and cache locally in your browser.",
+    image: HERO_IMAGE,
+  },
+  {
+    step: "02",
+    title: "Run locally",
+    desc: "Inference runs entirely on your device via WebGPU or WASM. No data ever leaves your machine.",
+    image: CODE_IMAGE,
+  },
+  {
+    step: "03",
+    title: "Own your data",
+    desc: "No servers, no API keys, no limits. You control everything — the model, the data, the privacy.",
+    image: NEURAL_IMAGE,
+  },
+];
+
 function ModelCard({ model, index }: { model: ModelInfo; index: number }) {
   const router = useRouter();
   const icon =
@@ -61,61 +87,132 @@ export default function Home() {
     <div className="min-h-dvh flex flex-col">
       <Navbar />
       <main className="flex-1">
-        {/* Hero - full bleed, massive text */}
-        <section className="px-6 sm:px-10 pt-28 pb-20 sm:pt-36 sm:pb-24">
-          <div className="max-w-5xl">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-              className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[0.9] text-[var(--fg)]"
-            >
-              AI that runs
-              <br />
-              <span className="text-[var(--fg-subtle)]">on your machine</span>
-              <span className="green-dot ml-3 sm:ml-4 align-middle inline-block" />
-            </motion.h1>
+        {/* ─── Hero — full-bleed with background image ─────────────── */}
 
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              className="mt-6 text-base sm:text-lg text-[var(--fg-muted)] max-w-xl leading-relaxed"
-            >
-              Pick a model below. It downloads once, caches locally, and runs entirely
-              in your browser. No servers, no API keys, no limits.
-            </motion.p>
+        <section className="relative overflow-hidden bg-[var(--fg)]">
+          {/* Background image with overlay */}
+          <div className="absolute inset-0">
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-30"
+              style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-br from-[var(--fg)]/95 via-[var(--fg)]/90 to-[var(--fg)]/80" />
+          </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
-              className="mt-8 flex items-center gap-4"
-            >
-              <a
-                href="#models"
-                className="inline-flex items-center gap-2 bg-[var(--green)] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[var(--green-hover)] transition-all duration-150 ease-out active:scale-[0.97]"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("models")?.scrollIntoView({ behavior: "smooth" });
-                }}
+          <div className="relative z-10 px-6 sm:px-10 pt-28 pb-20 sm:pt-36 sm:pb-24">
+            <div className="max-w-5xl">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
               >
-                Browse models
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square">
-                  <path d="M3 5l4 4 4-4" />
-                </svg>
-              </a>
-              <a
-                href="/docs"
-                className="inline-flex items-center gap-2 text-sm font-medium text-[var(--fg-muted)] px-6 py-3 rounded-xl border border-[var(--border)] hover:border-[var(--fg-muted)] hover:text-[var(--fg)] transition-all duration-150 ease-out active:scale-[0.97]"
+                <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full mb-6">
+                  <span className="green-dot" />
+                  <span className="text-xs font-medium text-white/60 uppercase tracking-wider">
+                    browser ai platform
+                  </span>
+                </div>
+              </motion.div>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-bold tracking-tight leading-[0.9] text-white"
               >
-                Docs
-              </a>
-            </motion.div>
+                AI that runs
+                <br />
+                <span className="text-white/40">on your machine.</span>
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                className="mt-6 text-base sm:text-lg text-white/50 max-w-xl leading-relaxed"
+              >
+                Pick a model below. It downloads once, caches locally, and runs entirely
+                in your browser. No servers, no API keys, no limits.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                className="mt-8 flex items-center gap-4"
+              >
+                <a
+                  href="#models"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("models")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="inline-flex items-center gap-2 bg-[var(--green)] text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-[var(--green-hover)] transition-all duration-150 ease-out active:scale-[0.97]"
+                >
+                  Browse models
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square">
+                    <path d="M3 5l4 4 4-4" />
+                  </svg>
+                </a>
+                <a
+                  href="/docs"
+                  className="inline-flex items-center gap-2 text-sm font-medium text-white/60 px-6 py-3 rounded-xl border border-white/10 hover:border-white/30 hover:text-white transition-all duration-150 ease-out active:scale-[0.97]"
+                >
+                  Docs
+                </a>
+              </motion.div>
+            </div>
           </div>
         </section>
 
-        {/* Models - full-width grid */}
+        {/* ─── How it works — with images ──────────────────────────── */}
+
+        <section className="px-6 sm:px-10 py-20 sm:py-24">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+              className="mb-12"
+            >
+              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--fg)]">
+                How it works
+              </h2>
+              <p className="mt-3 text-base text-[var(--fg-muted)] max-w-lg">
+                Three simple steps to run AI locally. No cloud, no setup, no cost.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {HOW_IT_WORKS.map((item, i) => (
+                <motion.div
+                  key={item.step}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                  className="group relative overflow-hidden rounded-2xl bg-white border border-[var(--border-light)]"
+                >
+                  <div className="aspect-[16/9] overflow-hidden">
+                    <div
+                      className="h-full w-full bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-105"
+                      style={{ backgroundImage: `url(${item.image})` }}
+                    />
+                  </div>
+                  <div className="p-5">
+                    <span className="text-xs font-bold text-[var(--green)] tracking-wider">{item.step}</span>
+                    <h3 className="text-base font-bold text-[var(--fg)] mt-1">{item.title}</h3>
+                    <p className="text-sm text-[var(--fg-muted)] mt-1.5 leading-relaxed">{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Models grid ─────────────────────────────────────────── */}
+
         <section id="models" className="px-6 sm:px-10 pb-20 sm:pb-24">
           <div className="space-y-12">
             {textModels.length > 0 && (
@@ -151,7 +248,86 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features */}
+        {/* ─── How to train video section ──────────────────────────── */}
+
+        <section className="bg-[var(--bg-alt)]">
+          <div className="px-6 sm:px-10 py-20 sm:py-24">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <span className="text-xs font-bold text-[var(--green)] uppercase tracking-wider">Training</span>
+                  <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[var(--fg)] mt-2">
+                    Create your own personality
+                  </h2>
+                  <p className="mt-3 text-base text-[var(--fg-muted)] leading-relaxed">
+                    Fine-tune SmolLM2-360M on any text using LoRA + Unsloth. Export to ONNX,
+                    upload to the Chat page, and start talking to your custom AI — all in your browser.
+                  </p>
+                  <div className="mt-6 space-y-3">
+                    {[
+                      { label: "1. Train", desc: "Use your GPU or Google Colab. ~5-15 minutes." },
+                      { label: "2. Export", desc: "Automatic ONNX export with --export-onnx flag." },
+                      { label: "3. Upload", desc: "Drag the ZIP into the Chat page." },
+                      { label: "4. Chat", desc: "All inference runs locally via WebGPU." },
+                    ].map(({ label, desc }) => (
+                      <div key={label} className="flex items-start gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--green)] text-white text-[10px] font-bold">
+                          {label[0]}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--fg)]">{label}</p>
+                          <p className="text-sm text-[var(--fg-muted)]">{desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-8 flex gap-3">
+                    <a
+                      href="/models/train"
+                      className="inline-flex items-center gap-2 bg-[var(--fg)] text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:opacity-85 transition-all duration-150 ease-out active:scale-[0.97]"
+                    >
+                      Start training
+                    </a>
+                    <a
+                      href="/models/chat"
+                      className="inline-flex items-center gap-2 text-sm font-medium text-[var(--fg-muted)] px-5 py-2.5 rounded-xl border border-[var(--border)] hover:border-[var(--fg-muted)] hover:text-[var(--fg)] transition-all duration-150 ease-out active:scale-[0.97]"
+                    >
+                      Chat with a model
+                    </a>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
+                  className="relative overflow-hidden rounded-2xl aspect-[4/3]"
+                >
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${WORKSPACE_IMAGE})` }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    <div className="flex items-center gap-2 text-white/80 text-xs">
+                      <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--green)]" />
+                      <span>All inference runs locally — zero server cost</span>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Features ────────────────────────────────────────────── */}
+
         <section className="border-t border-[var(--border-light)]">
           <div className="px-6 sm:px-10 py-16 sm:py-20">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 sm:gap-0 sm:divide-x sm:divide-[var(--border-light)]">

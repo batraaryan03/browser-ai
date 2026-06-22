@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 
+const ARCH_IMAGE = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1920&q=80&fm=webp&fit=crop";
+const NEURAL_IMAGE = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1920&q=80&fm=webp&fit=crop";
+
 const sections = [
   {
     id: "overview",
@@ -14,6 +17,16 @@ const sections = [
           <strong>browser ai</strong> is an open-source platform for running AI models entirely in your browser.
           No servers, no API keys, no data leaving your device. Every model runs locally via WebGPU or WebAssembly.
         </p>
+        <div className="relative overflow-hidden rounded-2xl aspect-[21/9] bg-[var(--bg-alt)]">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${ARCH_IMAGE})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5">
+            <span className="text-xs font-medium text-white/80">Browser-native AI inference — no servers, no latency</span>
+          </div>
+        </div>
         <p className="text-base text-[var(--fg-muted)] leading-relaxed">
           Built for two audiences: <strong>users</strong> who want private, free AI tools without setup, and
           <strong>developers/ML engineers</strong> who want to fine-tune, export, and deploy custom models for
@@ -44,6 +57,18 @@ const sections = [
     content: (
       <div className="space-y-5">
         <p className="text-base text-[var(--fg-muted)] leading-relaxed">The platform uses two inference engines depending on the model type:</p>
+
+        <div className="relative overflow-hidden rounded-2xl aspect-[21/9] bg-[var(--bg-alt)] mb-4">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${NEURAL_IMAGE})` }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/5 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5">
+            <span className="text-xs font-medium text-white/80">ONNX Runtime Web — two engines, one platform</span>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-[var(--border)] divide-y divide-[var(--border-light)]">
           <div className="px-6 py-4">
             <p className="text-sm font-semibold mb-2 text-[var(--fg)]">Transformers.js (standard models)</p>

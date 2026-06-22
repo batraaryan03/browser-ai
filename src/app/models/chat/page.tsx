@@ -11,6 +11,36 @@ import { OnnxChat, type ModelConfig } from "@/lib/onnx-chat";
 import { type TokenizerConfig } from "@/lib/bpe-tokenizer";
 import { unzip } from "fflate";
 
+// ── Image/Video assets ───────────────────────────────────────────────
+
+const CHAT_WORKFLOW_IMG = "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&q=80&fm=webp&fit=crop";
+const TRAIN_IMG = "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=1200&q=80&fm=webp&fit=crop";
+const UPLOAD_IMG = "https://images.unsplash.com/photo-1518432031352-d6fc5c10da5a?w=1200&q=80&fm=webp&fit=crop";
+const INFERENCE_IMG = "https://images.unsplash.com/photo-1504639725590-34d0984388bd?w=1200&q=80&fm=webp&fit=crop";
+
+const DEMO_VIDEO_URL = "https://www.pexels.com/video/smartphone-with-ai-chat-interface-on-screen-30479272/";
+
+const HOW_IT_WORKS_STEPS = [
+  {
+    step: "01",
+    title: "Train your model",
+    desc: "Fine-tune SmolLM2-360M on your text using LoRA + Unsloth. Runs on your GPU or free Google Colab. Takes ~5-15 minutes.",
+    image: TRAIN_IMG,
+  },
+  {
+    step: "02",
+    title: "Export to ONNX",
+    desc: "The script automatically exports to ONNX with KV-cache support. The model files are bundled into a ZIP archive.",
+    image: UPLOAD_IMG,
+  },
+  {
+    step: "03",
+    title: "Upload & chat",
+    desc: "Drag the ZIP into this page. The model loads into browser memory via ONNX Runtime Web. All inference runs locally — zero servers.",
+    image: INFERENCE_IMG,
+  },
+];
+
 // ── Types ────────────────────────────────────────────────────────────
 
 interface Message {
@@ -296,7 +326,7 @@ export default function ChatPage() {
     <div className="relative min-h-dvh flex flex-col bg-[var(--bg)]">
       <Navbar />
       <main className="flex-1 flex flex-col items-center px-5 pt-8 pb-20">
-        <div className="w-full max-w-lg mx-auto flex flex-col h-[75dvh] min-h-[500px] space-y-3">
+        <div className="w-full max-w-lg mx-auto flex flex-col space-y-3">
           {/* Header */}
           <div className="text-center space-y-2 shrink-0">
             <h1 className="text-2xl font-medium tracking-tight">Personality Chat</h1>
@@ -306,27 +336,44 @@ export default function ChatPage() {
             </p>
           </div>
 
-          {/* Upload card (shown when no model loaded) */}
+          {/* ── How it works section (before model loaded) ─────────── */}
+
           {!modelLoaded && !loadingModel && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white px-5 py-6 space-y-4 shrink-0"
+              className="space-y-6"
             >
-              <div className="space-y-2">
-                <p className="text-sm text-gray-600">
-                  Train a personality model, then upload the ZIP containing the ONNX export.
-                  The model runs locally in your browser — nothing leaves your device.
-                </p>
-                <ol className="text-xs text-gray-400 space-y-1.5 list-decimal list-inside leading-relaxed">
-                  <li>Train a model using the <strong>BYO GPU</strong> pipeline (or Colab)</li>
-                  <li>Export to ONNX with <span className="font-mono">--export-onnx</span></li>
-                  <li>Download the ZIP from <span className="font-mono">./output/</span></li>
-                  <li>Upload it here and start chatting</li>
-                </ol>
+              {/* Workflow steps with images */}
+              <div className="grid gap-4">
+                {HOW_IT_WORKS_STEPS.map((item, i) => (
+                  <motion.div
+                    key={item.step}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.08, duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                    className="group relative overflow-hidden rounded-2xl bg-white border border-[var(--border-light)]"
+                  >
+                    <div className="aspect-[16/7] overflow-hidden">
+                      <div
+                        className="h-full w-full bg-cover bg-center transition-transform duration-500 ease-out group-hover:scale-105"
+                        style={{ backgroundImage: `url(${item.image})` }}
+                      />
+                    </div>
+                    <div className="p-4">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xs font-bold text-[var(--green)] tracking-wider">{item.step}</span>
+                        <span className="text-xs text-[var(--border)]">·</span>
+                        <span className="text-xs font-semibold text-[var(--fg)]">{item.title}</span>
+                      </div>
+                      <p className="text-sm text-[var(--fg-muted)] leading-relaxed">{item.desc}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
 
-              <div className="border-2 border-dashed border-black/[0.08] px-5 py-8 text-center hover:border-black/[0.2] transition-colors cursor-pointer"
+              {/* Upload card */}
+              <div className="rounded-2xl bg-white border border-dashed border-[var(--border)] p-5 text-center hover:border-[var(--fg-subtle)] transition-colors cursor-pointer"
                 onClick={() => fileInputRef.current?.click()}
               >
                 <input
@@ -336,25 +383,57 @@ export default function ChatPage() {
                   onChange={handleFileUpload}
                   className="hidden"
                 />
-                <svg
-                  width="24" height="24" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="1" strokeLinecap="square"
-                  className="mx-auto mb-3 text-gray-300"
-                >
-                  <path d="M12 3v12M8 11l4 4 4-4" />
-                  <path d="M3 15v4a2 2 0 002 2h14a2 2 0 002-2v-4" />
-                </svg>
-                <p className="text-sm text-gray-500">
-                  Click to upload your <strong>model ZIP</strong>
-                </p>
-                <p className="text-[10px] text-gray-300 mt-1">
-                  Contains model.onnx, config.json, tokenizer.json
-                </p>
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--green-light)]">
+                    <svg
+                      width="20" height="20" viewBox="0 0 20 20" fill="none"
+                      stroke="var(--green)" strokeWidth="1.5" strokeLinecap="square"
+                    >
+                      <path d="M10 2v10M6 8l4 4 4-4M3 13v3a1 1 0 001 1h12a1 1 0 001-1v-3" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--fg)]">
+                      Upload your model ZIP
+                    </p>
+                    <p className="text-xs text-[var(--fg-subtle)] mt-0.5">
+                      Contains model.onnx, config.json, tokenizer.json
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium text-[var(--green)] bg-[var(--green-light)] px-3 py-1 rounded-full">
+                    Click to upload
+                  </span>
+                </div>
               </div>
 
-              <div className="bg-black/[0.02] px-4 py-3">
-                <p className="text-[10px] text-gray-400 font-mono leading-relaxed">
-                  python train/smol_lora_train.py --data ./book.txt --steps 60
+              {/* Quick command reference */}
+              <div className="bg-[var(--bg-alt)] rounded-2xl px-5 py-4">
+                <p className="text-xs font-medium text-[var(--fg-subtle)] mb-2 uppercase tracking-wider">Quick start</p>
+                <pre className="text-xs text-[var(--fg-muted)] font-mono leading-relaxed">
+                  <span className="text-[var(--fg-subtle)]"># Train + export on your GPU</span>{"\n"}
+                  <span className="text-[var(--fg)]">python train/smol_lora_train.py \</span>{"\n"}
+                  <span className="text-[var(--fg)]">  --data ./my-book.txt --steps 60 --export-onnx</span>{"\n\n"}
+                  <span className="text-[var(--fg-subtle)]"># Upload the ZIP and start chatting</span>
+                </pre>
+              </div>
+
+              {/* Demo video embed */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block h-2 w-2 rounded-full bg-[var(--green)]" />
+                  <span className="text-xs font-semibold text-[var(--fg)] uppercase tracking-wider">See it in action</span>
+                </div>
+                <div className="relative overflow-hidden rounded-2xl aspect-video bg-[var(--bg-alt)]">
+                  <iframe
+                    src="https://www.pexels.com/video/smartphone-with-ai-chat-interface-on-screen-30479272/embed"
+                    className="absolute inset-0 w-full h-full"
+                    allowFullScreen
+                    allow="autoplay; fullscreen"
+                    title="AI Chat Interface Demo"
+                  />
+                </div>
+                <p className="text-xs text-[var(--fg-subtle)] text-center">
+                  Watch how the personality model runs entirely in your browser — no server involved
                 </p>
               </div>
             </motion.div>
@@ -450,7 +529,7 @@ export default function ChatPage() {
 
           {/* Messages area */}
           {modelLoaded && (
-            <div className="flex-1 bg-white overflow-y-auto space-y-0">
+            <div className="flex-1 bg-white overflow-y-auto space-y-0" style={{ minHeight: "300px" }}>
               {messages.length === 0 && (
                 <div className="px-4 py-8 text-center">
                   <p className="text-xs text-gray-300">Send a message to start chatting.</p>
